@@ -24,30 +24,70 @@
     h1{margin:0 0 6px;color:#9a3412;font-size:17px;font-weight:900;line-height:1.4}
     .sub-title{font-size:15px;color:#7c2d12;font-weight:950;letter-spacing:-.5px}
 
-    .panel{margin:14px;padding:18px 14px;border:1px solid #fed7aa;border-radius:20px;background:#fffaf5;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.03)}
+    .panel{margin:14px;padding:18px 14px 14px;border:1px solid #fed7aa;border-radius:20px;background:#fffaf5;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.03)}
     .update-time{margin-bottom:12px;color:#9a3412;font-size:12px;font-weight:800}
     .badge{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:8px 18px;border-radius:999px;background:#dc2626;color:#fff;font-size:14px;font-weight:950;box-shadow:0 4px 15px rgba(220,38,38,.35)}
     .led{width:12px;height:12px;border-radius:50%;background:#fde047;border:1px solid #fef08a;box-shadow:0 0 12px #facc15;animation:blink 1s ease-in-out infinite}
     @keyframes blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.8)}}
 
-    /* Gauge: Perfect 5-band Conic Gradient from left to right (0deg to 180deg) with equal 36-degree slices */
-    .gauge-box{position:relative;width:240px;height:120px;margin:18px auto 6px;overflow:hidden}
-    .gauge-arc{
-      position:absolute;inset:0;
-      border-top-left-radius:120px;border-top-right-radius:120px;
-      background: conic-gradient(from 270deg,
-        #22c55e 0deg 36deg,     /* کم: 36 درجه */
-        #eab308 36deg 72deg,    /* متوسط: 36 درجه */
-        #f97316 72deg 108deg,   /* زیاد: 36 درجه */
-        #ef4444 108deg 144deg,  /* خیلی زیاد: 36 درجه */
-        #9333ea 144deg 180deg   /* بحرانی: 36 درجه */
-      );
-      -webkit-mask: radial-gradient(circle at 50% 100%, transparent 62%, #fff 63%);
-      mask: radial-gradient(circle at 50% 100%, transparent 62%, #fff 63%);
+    /* Gauge Container */
+    .gauge-wrapper{position:relative;width:240px;height:128px;margin:16px auto 4px}
+    .gauge-svg{width:240px;height:120px;display:block}
+    
+    .needle{
+      position:absolute;
+      bottom:8px;
+      left:120px;
+      width:4px;
+      height:96px;
+      background:#18181b;
+      transform-origin:bottom center;
+      transform:translateX(-50%) rotate(-90deg);
+      transition:transform 1.2s cubic-bezier(.2,.8,.2,1);
+      border-radius:4px;
+      box-shadow:0 0 6px rgba(0,0,0,.3);
+      z-index:5;
+    }
+    .hub{
+      position:absolute;
+      bottom:0;
+      left:50%;
+      transform:translateX(-50%);
+      width:18px;
+      height:18px;
+      background:#fff;
+      border:4px solid #18181b;
+      border-radius:50%;
+      z-index:6;
     }
 
-    .needle{position:absolute;bottom:0;left:120px;width:4px;height:100px;background:#18181b;transform-origin:bottom center;transform:translateX(-50%) rotate(-90deg);transition:transform 1.2s cubic-bezier(.2,.8,.2,1);border-radius:4px;box-shadow:0 0 6px rgba(0,0,0,.25)}
-    .hub{position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);width:18px;height:18px;background:#fff;border:4px solid #18181b;border-radius:50%}
+    /* Legend (راهنمای رنگی زیر گیج) */
+    .gauge-legend{
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      gap:8px;
+      margin-top:10px;
+      padding:6px 4px;
+      background:#fff;
+      border:1px solid #fed7aa;
+      border-radius:12px;
+      flex-wrap:wrap;
+    }
+    .legend-item{
+      display:flex;
+      align-items:center;
+      gap:4px;
+      font-size:10.5px;
+      font-weight:800;
+      color:#44403c;
+    }
+    .legend-dot{
+      width:9px;
+      height:9px;
+      border-radius:50%;
+      display:inline-block;
+    }
 
     .sec{margin:0 14px 14px;padding:14px;border:1px solid #fed7aa;border-radius:16px;background:#fff7ed}
     .sec h2{margin:0 0 8px;font-size:13px;font-weight:950;color:#7c2d12}
@@ -81,10 +121,32 @@
         <span id="riskLevel">در حال دریافت...</span>
       </div>
 
-      <div class="gauge-box" aria-label="شاخص خطر آتش‌سوزی">
-        <div class="gauge-arc"></div>
+      <!-- گیج دقیق SVG با ۵ قطاع کاملاً برابر (۳۶ درجه) از چپ به راست -->
+      <div class="gauge-wrapper" aria-label="شاخص خطر آتش‌سوزی">
+        <svg class="gauge-svg" viewBox="0 0 240 120">
+          <!-- قطاع ۱: کم (سبز) -->
+          <path d="M 15 115 A 105 105 0 0 1 35.09 53.31 L 49.33 63.65 A 87 87 0 0 0 33 115 Z" fill="#22c55e" />
+          <!-- قطاع ۲: متوسط (زرد) -->
+          <path d="M 35.09 53.31 A 105 105 0 0 1 87.55 15.11 L 92.79 32.06 A 87 87 0 0 0 49.33 63.65 Z" fill="#eab308" />
+          <!-- قطاع ۳: زیاد (نارنجی) -->
+          <path d="M 87.55 15.11 A 105 105 0 0 1 152.45 15.11 L 147.21 32.06 A 87 87 0 0 0 92.79 32.06 Z" fill="#f97316" />
+          <!-- قطاع ۴: خیلی زیاد (قرمز) -->
+          <path d="M 152.45 15.11 A 105 105 0 0 1 204.91 53.31 L 190.67 63.65 A 87 87 0 0 0 147.21 32.06 Z" fill="#ef4444" />
+          <!-- قطاع ۵: بحرانی (بنفش) -->
+          <path d="M 204.91 53.31 A 105 105 0 0 1 225 115 L 207 115 A 87 87 0 0 0 190.67 63.65 Z" fill="#9333ea" />
+        </svg>
+
         <div class="needle" id="needle"></div>
         <div class="hub"></div>
+      </div>
+
+      <!-- راهنمای رنگی زیر گیج -->
+      <div class="gauge-legend">
+        <span class="legend-item"><span class="legend-dot" style="background:#22c55e"></span>کم</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#eab308"></span>متوسط</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#f97316"></span>زیاد</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#ef4444"></span>خیلی زیاد</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#9333ea"></span>بحرانی</span>
       </div>
     </section>
 
@@ -124,12 +186,12 @@
 
   function clamp(x, a, b){ return Math.max(a, Math.min(b, x)); }
 
+  // FWI 0 to 100 maps to -90deg (left/green) to +90deg (right/purple)
   function fwiToAngle(fwi){
     const v = clamp(Number(fwi) || 0, 0, 100);
-    return -90 + (v/100)*180;
+    return -90 + (v / 100) * 180;
   }
 
-  // Generate pure Persian Shamsi date without time
   function getPersianDateOnly(){
     try {
       return new Intl.DateTimeFormat('fa-IR', {
@@ -144,12 +206,9 @@
     }
   }
 
-  // Clean and convert any date string (like ISO or English) to Persian date only if possible, or keep Persian text
   function formatToPersianDate(inputStr){
     if(!inputStr) return getPersianDateOnly();
-    // If it contains numbers, try parsing date part
     try {
-      // Extract YYYY-MM-DD if present
       const match = inputStr.match(/(\d{4})[/-](\d{1,2})[/-](\d{1,2})/);
       if(match){
         const dt = new Date(Date.UTC(parseInt(match[1]), parseInt(match[2])-1, parseInt(match[3])));
@@ -162,8 +221,7 @@
         }).format(dt);
       }
     } catch(e){}
-    // If it's already Persian text or cannot be parsed, return clean date part
-    return inputStr.split(',')[0].trim();
+    return inputStr.split(' ')[0].split(',')[0].trim();
   }
 
   function getAdvice(level){
