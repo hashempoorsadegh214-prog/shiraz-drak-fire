@@ -11,396 +11,262 @@
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 
   <style>
-    :root {
+    :root{
       font-family: "Vazirmatn", Tahoma, sans-serif;
-      color: #18181b;
-      background: linear-gradient(135deg, #fef3c7 0%, #fee2e2 100%);
+      color:#18181b;
+      background: linear-gradient(135deg,#fef3c7 0%,#fee2e2 100%);
     }
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;padding:16px 12px 24px;display:flex;justify-content:center;align-items:center}
+    .wrap{width:100%;max-width:480px}
+    .card{border:2px solid #f59e0b;border-radius:24px;overflow:hidden;background:#fff;box-shadow:0 20px 45px rgba(239,68,68,.15)}
+    header{padding:20px 16px 16px;text-align:center;background:linear-gradient(135deg,#fef3c7 0%,#fed7aa 100%);border-bottom:2px solid #ffedd5}
+    h1{margin:0 0 6px;color:#9a3412;font-size:17px;font-weight:900;line-height:1.4}
+    .sub-title{font-size:15px;color:#7c2d12;font-weight:950;letter-spacing:-.5px}
 
-    * { box-sizing: border-box; }
+    .panel{margin:14px;padding:18px 14px;border:1px solid #fed7aa;border-radius:20px;background:#fffaf5;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.03)}
+    .update-time{margin-bottom:12px;color:#9a3412;font-size:12px;font-weight:800}
+    .badge{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:8px 18px;border-radius:999px;background:#dc2626;color:#fff;font-size:14px;font-weight:950;box-shadow:0 4px 15px rgba(220,38,38,.35)}
+    .led{width:12px;height:12px;border-radius:50%;background:#fde047;border:1px solid #fef08a;box-shadow:0 0 12px #facc15;animation:blink 1s ease-in-out infinite}
+    @keyframes blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.8)}}
 
-    body {
-      margin: 0;
-      min-height: 100vh;
-      padding: 16px 12px 24px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .wrap { width: 100%; max-width: 480px; }
-
-    .card {
-      border: 2px solid #f59e0b;
-      border-radius: 24px;
-      overflow: hidden;
-      background: #ffffff;
-      box-shadow: 0 20px 45px rgba(239, 68, 68, 0.15);
-    }
-
-    header {
-      padding: 20px 16px 16px;
-      text-align: center;
-      background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%);
-      border-bottom: 2px solid #ffedd5;
-    }
-
-    h1 {
-      margin: 0 0 4px;
-      color: #9a3412;
-      font-size: 17px;
-      font-weight: 800;
-      line-height: 1.4;
-    }
-
-    .sub-title {
-      font-size: 15px;
-      color: #7c2d12;
-      font-weight: 950;
-      letter-spacing: -0.5px;
-    }
-
-    .panel {
-      margin: 14px;
-      padding: 18px 14px;
-      border: 1px solid #fed7aa;
-      border-radius: 20px;
-      background: #fffaf5;
-      text-align: center;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
-    }
-
-    .update-time {
-      margin-bottom: 12px;
-      color: #9a3412;
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      padding: 8px 22px;
-      border-radius: 999px;
-      background: #dc2626;
-      color: #fff;
-      font-size: 14px;
-      font-weight: 900;
-      box-shadow: 0 4px 15px rgba(220, 38, 38, 0.35);
-    }
-
-    .led {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: #fde047;
-      border: 1px solid #fef08a;
-      box-shadow: 0 0 12px #facc15;
-      animation: led-blink 1s ease-in-out infinite;
-    }
-
-    @keyframes led-blink {
-      0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 14px #facc15; }
-      50% { opacity: 0.3; transform: scale(0.8); box-shadow: 0 0 4px #facc15; }
-    }
-
-    /* Standardized 5-band Gauge Graphic */
-    .gauge-box {
-      position: relative;
-      width: 240px;
-      height: 120px;
-      margin: 22px auto 8px;
-      overflow: hidden;
-    }
-
-    .gauge-arc {
-      position: absolute;
-      width: 240px;
-      height: 120px;
-      border-top-left-radius: 120px;
-      border-top-right-radius: 120px;
-      background: conic-gradient(
-        from 270deg,
-        #22c55e 0deg 36deg,
-        #eab308 36deg 72deg,
-        #f97316 72deg 108deg,
-        #ef4444 108deg 144deg,
-        #9333ea 144deg 180deg
+    /* Gauge */
+    .gauge-box{position:relative;width:260px;height:140px;margin:18px auto 6px;overflow:hidden}
+    .gauge-arc{
+      position:absolute;inset:0;
+      border-top-left-radius:260px;border-top-right-radius:260px;
+      /* proportions based on EFFIS thresholds:
+         0-11.2 (22.4%), 11.2-21.3 (20.2%), 21.3-38 (33.4%), 38-50 (24%), 50-100 (50%)
+         We render 0..100 over 180deg.
+      */
+      background: conic-gradient(from 270deg,
+        #22c55e 0deg 40.32deg,
+        #eab308 40.32deg 76.68deg,
+        #f97316 76.68deg 136.8deg,
+        #ef4444 136.8deg 180deg
       );
       -webkit-mask: radial-gradient(circle at 50% 100%, transparent 62%, #fff 63%);
       mask: radial-gradient(circle at 50% 100%, transparent 62%, #fff 63%);
     }
-
-    .needle {
-      position: absolute;
-      bottom: 0;
-      left: 120px;
-      width: 4px;
-      height: 100px;
-      background: #18181b;
-      transform-origin: bottom center;
-      transform: translateX(-50%) rotate(-90deg);
-      transition: transform 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
-      border-radius: 4px;
-      box-shadow: 0 0 6px rgba(0,0,0,0.3);
+    /* Extreme band is shown as an overlay cap from 50..100 (right side half of arc) */
+    .gauge-extreme{
+      position:absolute;inset:0;
+      border-top-left-radius:260px;border-top-right-radius:260px;
+      background: conic-gradient(from 270deg,
+        transparent 0deg 180deg,
+        #9333ea 90deg 180deg
+      );
+      -webkit-mask: radial-gradient(circle at 50% 100%, transparent 62%, #fff 63%);
+      mask: radial-gradient(circle at 50% 100%, transparent 62%, #fff 63%);
+      opacity:.95;
+      pointer-events:none;
     }
 
-    .hub {
-      position: absolute;
-      bottom: -8px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 18px;
-      height: 18px;
-      background: #fff;
-      border: 4px solid #18181b;
-      border-radius: 50%;
-    }
+    .needle{position:absolute;bottom:6px;left:50%;width:4px;height:110px;background:#18181b;transform-origin:bottom center;transform:translateX(-50%) rotate(-90deg);transition:transform 1.2s cubic-bezier(.2,.8,.2,1);border-radius:4px;box-shadow:0 0 6px rgba(0,0,0,.25)}
+    .hub{position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);width:18px;height:18px;background:#fff;border:4px solid #18181b;border-radius:50%}
 
-    .sec {
-      margin: 0 14px 14px;
-      padding: 14px;
-      border: 1px solid #fed7aa;
-      border-radius: 16px;
-      background: #fff7ed;
-    }
+    .fwi-num{margin-top:10px;font-size:13px;font-weight:900;color:#7c2d12}
+    .fwi-num code{background:#fff; border:1px solid #fed7aa; padding:2px 8px; border-radius:10px}
 
-    .sec h2 {
-      margin: 0 0 8px;
-      color: #9a3412;
-      font-size: 13px;
-      font-weight: 800;
-    }
+    .sec{margin:0 14px 14px;padding:14px;border:1px solid #fed7aa;border-radius:16px;background:#fff7ed}
+    .sec h2{margin:0 0 8px;font-size:13px;font-weight:950;color:#7c2d12}
+    ul{margin:0;padding-right:18px;color:#7c2d12;font-size:12px;line-height:1.9;font-weight:700}
 
-    ul {
-      margin: 0;
-      padding-right: 18px;
-      color: #7c2d12;
-      font-size: 12px;
-      line-height: 1.9;
-      font-weight: 600;
-    }
+    .actions{margin:0 14px 14px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .btn{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 6px;border-radius:14px;text-decoration:none;font-weight:950;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.05);border:1px solid #cbd5e1;background:#fff;color:#18181b;cursor:pointer;min-height:54px}
+    .btn .small{font-size:10px;color:#9a3412;font-weight:800;margin-bottom:2px}
+    .btn.alert{background:#fee2e2;border-color:#fca5a5;color:#991b1b}
+    .btn.primary{background:#dcfce7;border-color:#86efac;color:#166534}
+    .btn.warn{background:#fef3c7;border-color:#fde68a;color:#92400e}
 
-    .actions {
-      margin: 0 14px 14px;
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-    }
-
-    .btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 10px 4px;
-      border-radius: 14px;
-      text-decoration: none;
-      font-weight: 900;
-      font-size: 13px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      border: 1px solid #cbd5e1;
-      background: #fff;
-      color: #18181b;
-      cursor: pointer;
-    }
-
-    .btn .small { font-size: 10px; color: #9a3412; font-weight: 700; margin-bottom: 2px; }
-    .btn.alert { background: #fee2e2; border-color: #fca5a5; color: #991b1b; }
-    .btn.primary { background: #dcfce7; border-color: #86efac; color: #166534; }
-    .btn.warn { background: #fef3c7; border-color: #fde68a; color: #92400e; }
-
-    .gps-box {
-      display: none;
-      margin: 0 14px 14px;
-      padding: 10px;
-      border-radius: 12px;
-      background: #fff;
-      border: 1px solid #cbd5e1;
-      font-size: 11px;
-      text-align: center;
-    }
-    .gps-box code { background: #f1f5f9; padding: 2px 6px; border-radius: 6px; }
+    .gps-box{display:none;margin:0 14px 14px;padding:10px;border-radius:12px;border:1px solid #cbd5e1;font-size:11px;background:#fff}
+    .gps-box code{background:#f1f5f9;padding:2px 6px;border-radius:6px}
+    .muted{opacity:.85}
   </style>
 </head>
+
 <body>
-  <main class="wrap">
-    <section class="card">
-      <header>
-        <h1 id="headerTitle">سامانه هشدار خطر آتش‌سوزی در کوهستان</h1>
-        <div class="sub-title" id="areaTitle">کوهستان دراک</div>
-      </header>
+<main class="wrap">
+  <section class="card">
+    <header>
+      <h1>سامانه هشدار خطر آتش‌سوزی در کوهستان</h1>
+      <div class="sub-title">کوهستان دراک</div>
+    </header>
 
-      <section class="panel">
-        <div class="update-time" id="updateTime">در حال بارگذاری زمان به‌روزرسانی...</div>
+    <section class="panel">
+      <div class="update-time" id="updateTime">در حال دریافت زمان بروزرسانی...</div>
 
-        <div class="badge">
-          <div class="led"></div>
-          <span id="riskText">در حال تحلیل داده‌های جوی...</span>
-        </div>
+      <div class="badge" id="riskBadge">
+        <span class="led" aria-hidden="true"></span>
+        <span id="riskLevel">در حال دریافت...</span>
+      </div>
 
-        <div class="gauge-box">
-          <div class="gauge-arc"></div>
-          <div class="needle" id="needle"></div>
-          <div class="hub"></div>
-        </div>
-      </section>
+      <div class="gauge-box" aria-label="شاخص خطر آتش‌سوزی">
+        <div class="gauge-arc"></div>
+        <div class="gauge-extreme"></div>
+        <div class="needle" id="needle"></div>
+        <div class="hub"></div>
+      </div>
 
-      <section class="sec">
-        <h2>اقدامات فوری و توصیه‌های ایمنی</h2>
-        <ul id="adviceList">
-          <li>در حال دریافت دستورالعمل‌های حفاظتی...</li>
-        </ul>
-      </section>
-
-      <nav class="actions">
-        <a class="btn alert" href="tel:125">
-          <span class="small">آتش‌نشانی</span>
-          <span>۱۲۵</span>
-        </a>
-        <button class="btn primary" id="locBtn" type="button">
-          <span class="small">موقعیت من</span>
-          <span id="locText">نمایش/کپی</span>
-        </button>
-        <a class="btn warn" href="tel:137">
-          <span class="small">منابع طبیعی</span>
-          <span>۱۳۷</span>
-        </a>
-      </nav>
-
-      <div class="gps-box" id="gpsBox">
-        مختصات GPS: <code id="gpsCoords">—</code> <span id="gpsMapLinks"></span>
+      <div class="fwi-num">FWI: <code id="fwiValue">—</code></div>
+      <div class="muted" style="margin-top:6px;font-size:11px;font-weight:800;color:#9a3412">
+        آستانه‌ها (EFFIS): کم &lt; 11.2 | متوسط 11.2–21.3 | زیاد 21.3–38 | خیلی زیاد 38–50 | بحرانی &gt; 50
       </div>
     </section>
-  </main>
 
-  <script>
-    const DATA_URL = "./data/derak_fwi.json";
+    <section class="sec">
+      <h2>اقدامات فوری و توصیه‌های ایمنی</h2>
+      <ul id="adviceList">
+        <li>در حال دریافت دستورالعمل‌های حفاظتی...</li>
+      </ul>
+    </section>
 
-    function getPersianDate() {
-      try {
-        return new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
-          timeZone: "Asia/Tehran",
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit"
-        }).format(new Date());
-      } catch (e) {
-        return "";
-      }
+    <nav class="actions">
+      <a class="btn alert" href="tel:125">
+        <span class="small">آتش‌نشانی</span>
+        125
+      </a>
+
+      <button class="btn primary" id="locBtn" type="button">
+        <span class="small">ارسال موقعیت</span>
+        GPS
+      </button>
+
+      <a class="btn warn" href="tel:137">
+        <span class="small">شهرداری</span>
+        137
+      </a>
+    </nav>
+
+    <div class="gps-box" id="gpsBox">
+      مختصات شما: <code id="gpsCoords">—</code>
+    </div>
+
+  </section>
+</main>
+
+<script>
+  const DATA_URL = "./data/derak_fwi.json";
+
+  function clamp(x, a, b){ return Math.max(a, Math.min(b, x)); }
+
+  // Map FWI 0..100 to needle angle -90..+90
+  function fwiToAngle(fwi){
+    const v = clamp(Number(fwi) || 0, 0, 100);
+    return -90 + (v/100)*180;
+  }
+
+  function getAdvice(level){
+    switch(level){
+      case "کم":
+        return [
+          "از رها کردن زباله و مواد پلاستیکی در طبیعت خودداری کنید.",
+          "پیش از ترک محل، از خاموش شدن کامل هرگونه پسماند حرارتی مطمئن شوید."
+        ];
+      case "متوسط":
+        return [
+          "از روشن کردن آتش در عرصه‌های طبیعی خودداری کنید.",
+          "ته‌سیگار یا کبریت روشن را در طبیعت رها نکنید."
+        ];
+      case "زیاد":
+        return [
+          "روشن کردن آتش و استعمال دخانیات در کوهستان ممنوع و خطرناک است.",
+          "در صورت مشاهده کوچک‌ترین دود، فوراً مراتب را گزارش دهید."
+        ];
+      case "خیلی زیاد":
+        return [
+          "از حضور غیرضروری در محدوده‌های پوشش گیاهی متراکم و خشک خودداری کنید.",
+          "هرگونه استفاده از آتش، ذغال و دخانیات اکیداً ممنوع است."
+        ];
+      case "بحرانی":
+        return [
+          "وضعیت فوق‌العاده؛ از ورود و توقف در کوهستان جداً خودداری کنید.",
+          "هر جرقه‌ای می‌تواند به یک حریق گسترده تبدیل شود."
+        ];
+      default:
+        return [
+          "با احتیاط کامل در طبیعت تردد کنید.",
+          "در صورت بروز حادثه با شماره‌های امدادی تماس بگیرید."
+        ];
     }
+  }
 
-    function getAdvice(level) {
-      switch(level) {
-        case "کم":
-          return [
-            "از رها کردن زباله و مواد پلاستیکی در طبیعت خودداری کنید.",
-            "پیش از ترک محل، از خاموش شدن کامل هرگونه پسماند حرارتی مطمئن شوید."
-          ];
-        case "متوسط":
-          return [
-            "از روشن کردن آتش در عرصه‌های طبیعی خودداری کنید.",
-            "ته‌سیگار یا کبریت روشن را در طبیعت رها نکنید."
-          ];
-        case "زیاد":
-          return [
-            "روشن کردن آتش و استعمال دخانیات در کوهستان ممنوع و خطرناک است.",
-            "در صورت مشاهده کوچک‌ترین دود، فوراً مراتب را گزارش دهید."
-          ];
-        case "خیلی زیاد":
-          return [
-            "از حضور غیرضروری در محدوده‌های پوشش گیاهی متراکم و خشک خودداری کنید.",
-            "هرگونه استفاده از آتش، ذغال و دخانیات اکیداً ممنوع است."
-          ];
-        case "بحرانی":
-          return [
-            "وضعیت فوق‌العاده؛ از ورود و توقف در کوهستان جداً خودداری کنید.",
-            "هر جرقه‌ای می‌تواند به یک حریق گسترده تبدیل شود."
-          ];
-        default:
-          return [
-            "با احتیاط کامل در طبیعت تردد کنید.",
-            "در صورت بروز حادثه با شماره‌های امدادی تماس بگیرید."
-          ];
-      }
-    }
+  async function loadData(){
+    const res = await fetch(DATA_URL, { cache: "no-store" });
+    if(!res.ok) throw new Error("Failed to fetch JSON: " + res.status);
+    return await res.json();
+  }
 
-    async function loadData() {
-      try {
-        const res = await fetch(DATA_URL + "?_=" + Date.now(), { cache: "no-store" });
-        if (!res.ok) throw new Error("Network error");
-        const data = await res.json();
+  function render(d){
+    // Force titles exactly as required (do NOT trust JSON for header)
+    // Subtitle fixed: کوهستان دراک
 
-        // Area Name
-        if (data.area_name) {
-          document.getElementById("areaTitle").textContent = data.area_name;
+    const updateTime = document.getElementById("updateTime");
+    updateTime.textContent = d.updated_at ? ("آخرین بروزرسانی: " + d.updated_at) : "زمان بروزرسانی نامشخص";
+
+    const riskLevel = document.getElementById("riskLevel");
+    const badge = document.getElementById("riskBadge");
+    riskLevel.textContent = d.risk_level_fa || "نامشخص";
+    badge.style.background = d.risk_color || "#dc2626";
+
+    const fwiValue = document.getElementById("fwiValue");
+    fwiValue.textContent = (d.fwi ?? "—");
+
+    const needle = document.getElementById("needle");
+    needle.style.transform = `translateX(-50%) rotate(${fwiToAngle(d.fwi)}deg)`;
+
+    const adviceList = document.getElementById("adviceList");
+    const items = getAdvice(d.risk_level_fa);
+    adviceList.innerHTML = items.map(t => `<li>${t}</li>`).join("");
+  }
+
+  async function main(){
+    try{
+      const d = await loadData();
+      render(d);
+      // cache
+      try{ localStorage.setItem("derak_fwi_cache", JSON.stringify({t: Date.now(), d})); }catch(e){}
+    }catch(err){
+      console.error(err);
+      // fallback to cache
+      try{
+        const cached = JSON.parse(localStorage.getItem("derak_fwi_cache") || "null");
+        if(cached && cached.d){
+          render(cached.d);
+          document.getElementById("updateTime").textContent =
+            "نمایش از حافظه مرورگر (آخرین داده ذخیره‌شده)";
+          return;
         }
-
-        // Time
-        let timeStr = data.updated_at || getPersianDate();
-        document.getElementById("updateTime").textContent = timeStr ? `به‌روزرسانی: ${timeStr}` : "";
-
-        // Risk Level & Needle Angle
-        const fwi = parseFloat(data.fwi) || 0;
-        let levelFa = data.risk_level_fa || "متوسط";
-        document.getElementById("riskText").textContent = `سطح خطر: ${levelFa}`;
-
-        let percent = Math.min(Math.max(fwi / 70, 0), 1);
-        let angle = -90 + (percent * 180);
-        document.getElementById("needle").style.transform = `translateX(-50%) rotate(${angle}deg)`;
-
-        // Advice
-        const items = getAdvice(levelFa);
-        document.getElementById("adviceList").innerHTML = items.map(i => `<li>${i}</li>`).join("");
-
-      } catch (err) {
-        console.error(err);
-        document.getElementById("updateTime").textContent = `به‌روزرسانی: ${getPersianDate()}`;
-        document.getElementById("riskText").textContent = "سطح خطر: اطلاعات برخط";
-        document.getElementById("needle").style.transform = "translateX(-50%) rotate(0deg)";
-        document.getElementById("adviceList").innerHTML = "<li>از روشن کردن آتش در طبیعت خودداری کنید.<br>در صورت مشاهده دود با ۱۲۵ تماس بگیرید.</li>";
-      }
+      }catch(e){}
+      document.getElementById("updateTime").textContent = "خطا در دریافت داده";
     }
+  }
 
-    document.getElementById("locBtn").addEventListener("click", () => {
-      const locText = document.getElementById("locText");
-      const gpsBox = document.getElementById("gpsBox");
-      const gpsCoords = document.getElementById("gpsCoords");
-      const gpsMapLinks = document.getElementById("gpsMapLinks");
+  document.getElementById("locBtn").addEventListener("click", () => {
+    if(!navigator.geolocation){
+      alert("مرورگر شما از GPS پشتیبانی نمی‌کند.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const lat = pos.coords.latitude.toFixed(6);
+      const lon = pos.coords.longitude.toFixed(6);
+      document.getElementById("gpsCoords").textContent = `${lat}, ${lon}`;
+      document.getElementById("gpsBox").style.display = "block";
 
-      if (!navigator.geolocation) {
-        alert("مرورگر شما از GPS پشتیبانی نمی‌کند.");
-        return;
+      const text = `موقعیت من: ${lat}, ${lon}`;
+      const url = `https://maps.google.com/?q=${lat},${lon}`;
+
+      if(navigator.share){
+        navigator.share({ title: "موقعیت مکانی", text, url }).catch(()=>{});
+      }else{
+        prompt("کپی کنید و ارسال کنید:", text + " - " + url);
       }
+    }, () => {
+      alert("دسترسی به موقعیت مکانی رد شد یا خطا رخ داد.");
+    }, { enableHighAccuracy: true, timeout: 12000 });
+  });
 
-      locText.textContent = "در حال یافتن...";
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const lat = pos.coords.latitude.toFixed(5);
-          const lon = pos.coords.longitude.toFixed(5);
-          const coordStr = `${lat}, ${lon}`;
-
-          gpsCoords.textContent = coordStr;
-          gpsBox.style.display = "block";
-          locText.textContent = "کپی شد!";
-          
-          gpsMapLinks.innerHTML = ` | <a href="https://maps.google.com/?q=${coordStr}" target="_blank">نقشه</a>`;
-          navigator.clipboard.writeText(coordStr).catch(()=>{});
-          setTimeout(() => locText.textContent = "نمایش/کپی", 3000);
-        },
-        () => {
-          locText.textContent = "خطا در GPS";
-          alert("لطفاً دسترسی به موقعیت مکانی را فعال کنید.");
-        },
-        { enableHighAccuracy: true, timeout: 8000 }
-      );
-    });
-
-    loadData();
-  </script>
+  main();
+</script>
 </body>
 </html>
