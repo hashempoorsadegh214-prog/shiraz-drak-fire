@@ -3,7 +3,7 @@ name: Update FWI Derak
 on:
   workflow_dispatch:
   schedule:
-    - cron: "30 1 * * *"
+    - cron: "30 20 * * *"
 
 permissions:
   contents: write
@@ -54,9 +54,12 @@ jobs:
 
           OUTPUT_FILE = "data/derak_fwi.json"
 
+          # تنظیم منطقه زمانی ایران (UTC + 3:30)
           IRAN_TZ = timezone(timedelta(hours=3, minutes=30))
           now = datetime.now(IRAN_TZ)
-          target = now.date() + timedelta(days=1)
+
+          # دریافت شاخص برای همان روز جاری
+          target = now.date()
           target_date = target.strftime("%Y-%m-%d")
 
           def gregorian_to_jalali(gy, gm, gd):
