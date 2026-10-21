@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="fa" dir="rtl">
 <head>
@@ -205,6 +204,69 @@
       line-height: 1.9;
     }
 
+    /* بخش راهنمای سامانه */
+    .guide-box {
+      margin: 0 14px 14px;
+      background: #fffbeb;
+      border: 1.5px dashed #f59e0b;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .guide-toggle {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      color: #92400e;
+      font-size: 12.5px;
+      font-weight: 900;
+      text-align: right;
+    }
+
+    .guide-toggle span.icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      background: #fde68a;
+      border-radius: 50%;
+      font-size: 12px;
+      transition: transform 0.3s;
+    }
+
+    .guide-toggle.open span.icon {
+      transform: rotate(180deg);
+    }
+
+    .guide-content {
+      display: none;
+      padding: 4px 14px 14px;
+      color: #78350f;
+      font-size: 11.5px;
+      line-height: 1.85;
+      border-top: 1px solid #fde68a;
+    }
+
+    .guide-content p {
+      margin: 6px 0;
+    }
+
+    .guide-content ol {
+      margin: 4px 0 0;
+      padding-right: 16px;
+    }
+
+    .guide-content li {
+      margin-bottom: 4px;
+    }
+
     .actions {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -302,7 +364,6 @@
 
         <div class="gauge-wrapper" aria-label="شاخص خطر آتش‌سوزی">
           <svg class="gauge-svg" viewBox="0 0 240 120" role="img" aria-label="گیج خطر آتش‌سوزی">
-            <!-- رنگ‌ها از چپ به راست: سبز، زرد، نارنجی، قرمز، بنفش -->
             <path d="M 15 115 A 105 105 0 0 1 35.09 53.31 L 49.33 63.65 A 87 87 0 0 0 33 115 Z" fill="#22c55e"/>
             <path d="M 35.09 53.31 A 105 105 0 0 1 87.55 15.11 L 92.79 32.06 A 87 87 0 0 0 49.33 63.65 Z" fill="#eab308"/>
             <path d="M 87.55 15.11 A 105 105 0 0 1 152.45 15.11 L 147.21 32.06 A 87 87 0 0 0 92.79 32.06 Z" fill="#f97316"/>
@@ -327,6 +388,22 @@
         <ul id="adviceList">
           <li>در حال دریافت دستورالعمل‌های حفاظتی...</li>
         </ul>
+      </section>
+
+      <!-- راهنمای استفاده از سامانه -->
+      <section class="guide-box">
+        <button type="button" class="guide-toggle" id="guideToggle" aria-expanded="false">
+          <span>راهنمای استفاده از سامانه هشدار</span>
+          <span class="icon" aria-hidden="true">▼</span>
+        </button>
+        <div class="guide-content" id="guideContent">
+          <p><strong>این سامانه چگونه کار می‌کند؟</strong></p>
+          <ol>
+            <li><strong>درجه خطر:</strong> براساس داده‌های هواشناسی روزانه و شاخص استاندارد خطر آتش‌سوزی (FWI) به ۵ سطح از <em>کم (سبز)</em> تا <em>بحرانی (بنفش)</em> محاسبه و به‌روزرسانی می‌شود.</li>
+            <li><strong>دکمه GPS:</strong> در زمان وقوع حادثه یا مشاهده دود، با زدن دکمه GPS، موقعیت دقیق جغرافیایی شما ثبت شده و لینک مستقیم آن جهت ارسال به نیروهای امدادی آماده می‌شود.</li>
+            <li><strong>تماس سریع:</strong> دکمه‌های شماره‌گیری سریع ۱۲۵ و ۱۳۷ برای اعلام فوری آتش‌سوزی تعبیه شده‌اند.</li>
+          </ol>
+        </div>
       </section>
 
       <nav class="actions">
@@ -354,6 +431,16 @@
 
   <script>
     const DATA_URL = "./data/derak_fwi.json";
+
+    // فعال‌سازی آکاردئون راهنما
+    const guideToggle = document.getElementById("guideToggle");
+    const guideContent = document.getElementById("guideContent");
+    guideToggle.addEventListener("click", () => {
+      const isOpen = guideContent.style.display === "block";
+      guideContent.style.display = isOpen ? "none" : "block";
+      guideToggle.classList.toggle("open", !isOpen);
+      guideToggle.setAttribute("aria-expanded", !isOpen);
+    });
 
     function clamp(value, min, max) {
       return Math.max(min, Math.min(max, value));
@@ -462,10 +549,6 @@
       const badge = document.getElementById("riskBadge");
       badge.style.background = colors[level] || data.risk_color || "#dc2626";
 
-      /*
-        عقربه از سطح هشدار پیروی می‌کند تا با متن نشان یکی باشد.
-        اعداد، مرکز قطاع‌های پنج‌گانه روی مقیاس ۰ تا ۱۰۰ هستند.
-      */
       const levelValues = {
         "کم": 10,
         "متوسط": 30,
@@ -551,7 +634,6 @@
                 url: mapUrl
               });
             } catch (error) {
-              // اگر کاربر پنجره اشتراک‌گذاری را ببندد، لینک همچنان در صفحه موجود است.
               if (error.name !== "AbortError") {
                 console.warn("اشتراک‌گذاری انجام نشد:", error);
               }
