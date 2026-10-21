@@ -18,6 +18,7 @@
       --text: #0f172a;
       --border: #e2e8f0;
       --risk: #dc2626;
+      --accent: #f59e0b; /* amber */
       --shadow: rgba(15, 23, 42, 0.08);
       font-family: "Vazirmatn", Tahoma, sans-serif;
       color: var(--text);
@@ -32,7 +33,7 @@
       justify-content:center;
       background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
     }
-    .wrap{width:100%; max-width:480px}
+    .wrap{width:100%; max-width:520px}
     .card{
       border:1px solid var(--border);
       border-radius:24px;
@@ -50,7 +51,7 @@
       display:inline-block;
       padding:6px 14px;
       border-radius:999px;
-      background: #f59e0b;
+      background: var(--accent);
       color:#ffffff;
       font-size:12px;
       font-weight:800;
@@ -59,6 +60,7 @@
     h1{margin:10px 0 4px; font-size:20px; color:#1e293b; font-weight:800;}
     .sub{color:var(--muted); font-size:13px; line-height:1.6}
 
+    /* Gauge */
     .panel{
       margin:14px;
       padding:18px 14px;
@@ -78,47 +80,57 @@
       font-size:14px;
       box-shadow: 0 6px 20px rgba(220, 38, 38, 0.35);
     }
-    .meter{
-      margin:16px auto 8px;
-      height:14px;
+
+    .gauge{
+      position:relative;
       width:100%;
-      border-radius:999px;
-      overflow:hidden;
-      background: linear-gradient(to left, #7f1d1d, #ef4444, #f97316, #eab308, #22c55e);
-      border: 1px solid rgba(0,0,0,.08);
+      max-width:420px;
+      margin:16px auto 8px;
+      aspect-ratio: 2 / 1; /* نیم‌دایره */
     }
-    .markerRow{position:relative; height:18px; margin-top:2px}
-    .marker{
-      position:absolute;
-      top:-7px;
-      right: calc(var(--pos) * 1%);
-      transform: translateX(50%);
-      width:16px; height:16px;
-      border-radius:50%;
-      border:3px solid #ffffff;
+    .arc{
+      position:absolute; inset:0;
+      background:
+        conic-gradient(from 180deg,
+          #22c55e 0 36deg,
+          #eab308 36deg 72deg,
+          #f97316 72deg 108deg,
+          #ef4444 108deg 144deg,
+          #b91c1c 144deg 180deg);
+      border-bottom-left-radius:999px;
+      border-bottom-right-radius:999px;
+      border-top-left-radius:999px;
+      border-top-right-radius:999px;
+      -webkit-mask:
+        radial-gradient(100% 100% at 50% 100%, transparent 60%, #000 60.2%);
+      mask:
+        radial-gradient(100% 100% at 50% 100%, transparent 60%, #000 60.2%);
+      border:1px solid rgba(0,0,0,.06);
+      box-shadow: inset 0 2px 10px rgba(0,0,0,0.06);
+    }
+    .needle{
+      position:absolute; left:50%; bottom:0;
+      width:2px; height:52%;
       background: var(--risk);
-      box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+      transform-origin: bottom center;
+      transform: rotate(0deg);
+      box-shadow: 0 0 0 1px #fff, 0 2px 8px rgba(0,0,0,0.2);
     }
+    .hub{
+      position:absolute; left:50%; bottom:0;
+      transform: translate(-50%, 40%);
+      width:18px; height:18px; border-radius:50%;
+      background:#fff; border:3px solid var(--risk);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+
     .score{
-      margin-top:6px;
-      display:flex;
-      align-items:baseline;
-      justify-content:center;
-      gap:8px;
+      margin-top:10px;
+      display:flex; align-items:baseline; justify-content:center; gap:8px;
     }
-    .score .num{
-      font-size:56px;
-      font-weight:900;
-      color: #0f172a;
-      letter-spacing:-1px;
-      line-height:1;
-    }
-    .score .lbl{
-      color:var(--muted);
-      font-size:13px;
-      font-weight:600;
-      padding-bottom:6px;
-    }
+    .score .num{font-size:54px; font-weight:900; color:#0f172a; letter-spacing:-1px; line-height:1;}
+    .score .lbl{color:var(--muted); font-size:13px; font-weight:600; padding-bottom:6px;}
+
     .hint{
       margin-top:8px;
       color: #334155;
@@ -126,6 +138,23 @@
       font-weight:600;
       line-height:1.8;
     }
+
+    /* Info cards */
+    .stats{
+      margin:0 14px 14px;
+      display:grid; grid-template-columns: repeat(3, 1fr);
+      gap:10px;
+    }
+    .stat{
+      border:1px solid var(--border);
+      background:#ffffff;
+      border-radius:16px;
+      padding:10px 8px;
+      text-align:center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .stat .t{font-size:11px; color:#64748b; font-weight:700;}
+    .stat .v{margin-top:4px; font-size:18px; font-weight:900; color:#0f172a;}
 
     .sec{
       margin:0 14px 14px;
@@ -141,28 +170,29 @@
       font-weight:800;
     }
     ul{margin:0; padding-right:18px; color:#334155; font-size:13px; line-height:2.1; font-weight:600;}
-    .grid{
-      display:grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap:8px;
-      margin-top:8px;
+
+    .actions{
+      margin:0 14px 14px;
+      display:grid; grid-template-columns: repeat(3, 1fr);
+      gap:10px;
     }
-    .call{
-      text-decoration:none;
-      color:#0f172a;
-      border:1px solid #cbd5e1;
-      background: #ffffff;
-      border-radius:14px;
-      padding:12px 6px;
+    .btn{
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:6px; text-decoration:none; user-select:none; -webkit-tap-highlight-color: transparent;
+      min-height:64px; padding:8px 6px; border-radius:16px; font-weight:900; font-size:14px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+      border:1px solid #cbd5e1; background:#fff; color:#0f172a;
       text-align:center;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     }
-    .call span{display:block; color:var(--muted); font-size:11px; font-weight:600;}
-    .call strong{display:block; margin-top:2px; font-size:18px; font-weight:900; color:#dc2626;}
+    .btn .small{font-size:11px; color:#64748b; font-weight:700;}
+    .btn.alert{background:#fee2e2; border-color:#fecaca; color:#991b1b;}
+    .btn.primary{background:#d1fae5; border-color:#a7f3d0; color:#065f46;}
+    .btn.warn{background:#fef3c7; border-color:#fde68a; color:#92400e;}
+
     .meta{
       padding:0 16px 18px;
       text-align:center;
-      color:var(--muted);
+      color: #64748b;
       font-size:11px;
       line-height:1.8;
     }
@@ -177,6 +207,19 @@
       font-size:13px;
       line-height:1.8;
     }
+
+    /* GPS mini box */
+    .gps{
+      margin:0 14px 14px;
+      padding:12px;
+      border-radius:14px;
+      border:1px solid #cbd5e1;
+      background:#ffffff;
+      color:#0f172a;
+      font-size:12px;
+      display:none;
+    }
+    .gps code{background:#f1f5f9; padding:2px 6px; border-radius:8px;}
   </style>
 </head>
 
@@ -192,9 +235,10 @@
       <div class="panel" aria-live="polite">
         <div class="badge" id="riskBadge">در حال دریافت…</div>
 
-        <div class="meter" aria-hidden="true"></div>
-        <div class="markerRow" aria-hidden="true">
-          <div class="marker" id="marker"></div>
+        <div class="gauge" aria-hidden="true">
+          <div class="arc"></div>
+          <div class="needle" id="needle"></div>
+          <div class="hub"></div>
         </div>
 
         <div class="score">
@@ -205,6 +249,21 @@
         <div class="hint" id="shortHint">لطفاً چند ثانیه صبر کنید…</div>
       </div>
 
+      <div class="stats" id="statsRow" style="display:none;">
+        <div class="stat" id="tempCard">
+          <div class="t">دما</div>
+          <div class="v" id="tempVal">—</div>
+        </div>
+        <div class="stat" id="windCard">
+          <div class="t">باد</div>
+          <div class="v" id="windVal">—</div>
+        </div>
+        <div class="stat" id="humCard">
+          <div class="t">رطوبت</div>
+          <div class="v" id="humVal">—</div>
+        </div>
+      </div>
+
       <div class="sec">
         <h2>اقدامات فوری و توصیه‌های ایمنی</h2>
         <ul id="advice">
@@ -212,13 +271,24 @@
         </ul>
       </div>
 
-      <div class="sec">
-        <h2>تماس اضطراری</h2>
-        <div class="grid">
-          <a class="call" href="tel:125"><span>آتش‌نشانی</span><strong>۱۲۵</strong></a>
-          <a class="call" href="tel:110"><span>پلیس</span><strong>۱۱۰</strong></a>
-          <a class="call" href="tel:147"><span>منابع طبیعی</span><strong>۱۴۷</strong></a>
-        </div>
+      <div class="actions">
+        <a class="btn alert" href="tel:125">
+          <span class="small">آتش‌نشانی</span>
+          <span>۱۲۵</span>
+        </a>
+        <a class="btn primary" id="locBtn" href="javascript:void(0)">
+          <span class="small">موقعیت من</span>
+          <span>نمایش/کپی</span>
+        </a>
+        <a class="btn warn" href="tel:147">
+          <span class="small">منابع طبیعی</span>
+          <span>۱۴۷</span>
+        </a>
+      </div>
+
+      <div class="gps" id="gpsBox">
+        مختصات شما: <code id="gpsText">—</code>
+        <span id="gpsLinks"></span>
       </div>
 
       <div class="error" id="errorBox">
@@ -231,6 +301,7 @@
 
   <script>
     const DATA_URL = "./data/derak_fwi.json";
+    const LS_KEY = "derak_last_data_v1";
 
     function adviceByLevel(levelFa) {
       switch (levelFa) {
@@ -292,17 +363,64 @@
 
     function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
 
-    function render(data) {
+    function setRiskColor(hex){
+      let color = hex || "#dc2626";
+      if (color === "#7f1d1d") color = "#b91c1c";
+      document.documentElement.style.setProperty("--risk", color);
+    }
+
+    function angleForValue(v){
+      // 0..100 -> 180..0 degrees (نیم‌دایره از چپ به راست)
+      const val = clamp(v, 0, 100);
+      return 180 - (val * 1.8);
+    }
+
+    function updateNeedle(v){
+      const deg = angleForValue(v);
+      const needle = document.getElementById("needle");
+      needle.style.transition = "transform 700ms cubic-bezier(.2,.8,.2,1)";
+      needle.style.transform = `rotate(${deg}deg)`;
+    }
+
+    function showStats(data){
+      const t = data.temperature_c;
+      const w = data.wind_speed_kmh || data.wind_speed_ms;
+      const h = data.humidity_pct;
+
+      let hasAny = false;
+      if (Number.isFinite(Number(t))){
+        document.getElementById("tempVal").textContent = `${Number(t).toFixed(0)}°`;
+        hasAny = true;
+      } else {
+        document.getElementById("tempCard").style.display = "none";
+      }
+
+      if (Number.isFinite(Number(w))){
+        const val = Number(w);
+        const kmh = data.wind_speed_kmh != null ? val : (val * 3.6);
+        document.getElementById("windVal").textContent = `${kmh.toFixed(0)} km/h`;
+        hasAny = true;
+      } else {
+        document.getElementById("windCard").style.display = "none";
+      }
+
+      if (Number.isFinite(Number(h))){
+        document.getElementById("humVal").textContent = `${Number(h).toFixed(0)}٪`;
+        hasAny = true;
+      } else {
+        document.getElementById("humCard").style.display = "none";
+      }
+
+      if (hasAny) document.getElementById("statsRow").style.display = "grid";
+    }
+
+    function render(data, note=""){
       const v = Number(data.fwi);
       if (!Number.isFinite(v)) throw new Error("Invalid number");
 
       const levelFa = data.risk_level_fa || "نامشخص";
-      let color = data.risk_color || "#dc2626";
-      if (color === "#7f1d1d") color = "#b91c1c"; // برای خوانایی بهتر در روز
-
-      document.documentElement.style.setProperty("--risk", color);
-      const pos = clamp((v / 100) * 100, 2, 98);
-      document.documentElement.style.setProperty("--pos", String(pos));
+      setRiskColor(data.risk_color);
+      updateNeedle(v);
 
       document.getElementById("title").textContent = data.area_name || "کوهستان دراک (شیراز)";
       document.getElementById("riskBadge").textContent = `سطح خطر: ${levelFa}`;
@@ -310,8 +428,9 @@
 
       const pack = adviceByLevel(levelFa);
       document.getElementById("shortHint").textContent = pack.hint;
-      document.getElementById("advice").innerHTML =
-        pack.items.map(x => `<li>${x}</li>`).join("");
+      document.getElementById("advice").innerHTML = pack.items.map(x => `<li>${x}</li>`).join("");
+
+      showStats(data);
 
       const d = data.forecast_shamsi || data.forecast_gregorian || "";
       const gen = data.generated_at || "";
@@ -320,19 +439,90 @@
       if (d) parts.push(`تاریخ: ${d}`);
       if (gen) parts.push(`به‌روزرسانی: ${gen}`);
       if (pts !== "") parts.push(`نمونه‌برداری: ${pts} نقطه`);
+      if (note) parts.push(note);
       document.getElementById("metaLine").textContent = parts.join(" | ");
     }
 
-    fetch(DATA_URL, { cache: "no-store" })
-      .then(r => { if (!r.ok) throw new Error("No data"); return r.json(); })
-      .then(render)
-      .catch(err => {
+    function saveIfToday(data){
+      try{
+        const today = new Date().toISOString().slice(0,10);
+        const stamp = (data.generated_at || "").slice(0,10);
+        if (stamp === today){
+          localStorage.setItem(LS_KEY, JSON.stringify(data));
+        }
+      }catch(e){}
+    }
+
+    function tryRenderFromCache(){
+      try{
+        const raw = localStorage.getItem(LS_KEY);
+        if (!raw) return false;
+        const data = JSON.parse(raw);
+        render(data, "نمایش آخرین وضعیت ذخیره‌شده امروز");
+        return true;
+      }catch(e){ return false; }
+    }
+
+    async function load(){
+      try{
+        const r = await fetch(DATA_URL, { cache: "no-store" });
+        if (!r.ok) throw new Error("No data");
+        const data = await r.json();
+        render(data);
+        saveIfToday(data);
+      }catch(err){
         console.error(err);
-        document.getElementById("riskBadge").textContent = "اطلاعات در دسترس نیست";
-        document.getElementById("shortHint").textContent = "فعلاً امکان دریافت داده وجود ندارد.";
-        document.getElementById("errorBox").style.display = "block";
-        document.getElementById("metaLine").textContent = "—";
+        const ok = tryRenderFromCache();
+        if (!ok){
+          document.getElementById("riskBadge").textContent = "اطلاعات در دسترس نیست";
+          document.getElementById("shortHint").textContent = "فعلاً امکان دریافت داده وجود ندارد.";
+          document.getElementById("errorBox").style.display = "block";
+          document.getElementById("metaLine").textContent = "—";
+        }
+      }
+    }
+
+    function setupGPS(){
+      const btn = document.getElementById("locBtn");
+      const box = document.getElementById("gpsBox");
+      const text = document.getElementById("gpsText");
+      const links = document.getElementById("gpsLinks");
+
+      btn.addEventListener("click", () => {
+        if (!navigator.geolocation){
+          box.style.display = "block";
+          text.textContent = "دستگاه از موقعیت پشتیبانی نمی‌کند.";
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const { latitude: lat, longitude: lon } = pos.coords;
+            const latStr = lat.toFixed(6), lonStr = lon.toFixed(6);
+            const msg = `${latStr}, ${lonStr}`;
+            text.textContent = msg;
+            box.style.display = "block";
+
+            // لینک سریع نقشه
+            const g = `https://maps.google.com/?q=${latStr},${lonStr}`;
+            const osm = `https://www.openstreetmap.org/?mlat=${latStr}&mlon=${lonStr}#map=16/${latStr}/${lonStr}`;
+            links.innerHTML = ` | <a href="${g}" target="_blank" rel="noreferrer">نقشه گوگل</a> • <a href="${osm}" target="_blank" rel="noreferrer">اوپن‌استریت‌مپ</a>`;
+
+            // کپی در کلیپ‌بورد
+            if (navigator.clipboard){
+              navigator.clipboard.writeText(msg).catch(()=>{});
+            }
+          },
+          (err) => {
+            box.style.display = "block";
+            text.textContent = "دسترسی به موقعیت رد شد یا در دسترس نیست.";
+          },
+          { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+        );
       });
+    }
+
+    load();
+    setupGPS();
   </script>
 </body>
 </html>
