@@ -54,7 +54,6 @@ jobs:
 
           OUTPUT_FILE = "data/derak_fwi.json"
 
-          # تنظیم منطقه زمانی ایران (UTC + 3:30)
           IRAN_TZ = timezone(timedelta(hours=3, minutes=30))
           now = datetime.now(IRAN_TZ)
 
@@ -193,7 +192,7 @@ jobs:
 
           output = {
               "area_id": "derak-mountain",
-              "area_name": "کوهستان دراک (شیراز)",
+              "area_name": "کوهستان دراک",
               "forecast_gregorian": target_date,
               "forecast_shamsi": shamsi_date,
               "updated_at": updated_at_fa,
@@ -220,6 +219,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "Update daily Derak FWI forecast with proper updated_at"
+            git commit -m "Update daily Derak FWI forecast with correct title"
             git push
           fi
