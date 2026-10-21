@@ -45,28 +45,19 @@
       border-bottom: 2px solid #ffedd5;
     }
 
-    .badge-top {
-      display: inline-block;
-      padding: 4px 14px;
-      border-radius: 999px;
-      background: #c2410c;
-      color: #fff;
-      font-size: 11px;
-      font-weight: 800;
-      margin-bottom: 8px;
-    }
-
     h1 {
       margin: 0 0 4px;
       color: #9a3412;
-      font-size: 19px;
-      font-weight: 900;
+      font-size: 17px;
+      font-weight: 800;
+      line-height: 1.4;
     }
 
     .sub-title {
-      font-size: 13px;
-      color: #c2410c;
-      font-weight: 700;
+      font-size: 15px;
+      color: #7c2d12;
+      font-weight: 950;
+      letter-spacing: -0.5px;
     }
 
     .panel {
@@ -115,7 +106,7 @@
       50% { opacity: 0.3; transform: scale(0.8); box-shadow: 0 0 4px #facc15; }
     }
 
-    /* Professional Gauge Graphic */
+    /* Standardized 5-band Gauge Graphic */
     .gauge-box {
       position: relative;
       width: 240px;
@@ -238,9 +229,8 @@
   <main class="wrap">
     <section class="card">
       <header>
-        <div class="badge-top">سامانه هوشمند پایش طبیعی</div>
-        <h1 id="areaTitle">کوهستان دراک (شیراز)</h1>
-        <div class="sub-title">سامانه هشدار خطر آتش‌سوزی در کوهستان</div>
+        <h1 id="headerTitle">سامانه هشدار خطر آتش‌سوزی در کوهستان</h1>
+        <div class="sub-title" id="areaTitle">کوهستان دراک</div>
       </header>
 
       <section class="panel">
@@ -345,7 +335,7 @@
         if (!res.ok) throw new Error("Network error");
         const data = await res.json();
 
-        // Title
+        // Area Name
         if (data.area_name) {
           document.getElementById("areaTitle").textContent = data.area_name;
         }
@@ -359,7 +349,6 @@
         let levelFa = data.risk_level_fa || "متوسط";
         document.getElementById("riskText").textContent = `سطح خطر: ${levelFa}`;
 
-        // Needle rotation (-90deg to +90deg based on fwi 0 to 70)
         let percent = Math.min(Math.max(fwi / 70, 0), 1);
         let angle = -90 + (percent * 180);
         document.getElementById("needle").style.transform = `translateX(-50%) rotate(${angle}deg)`;
