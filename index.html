@@ -30,43 +30,27 @@
     .led{width:12px;height:12px;border-radius:50%;background:#fde047;border:1px solid #fef08a;box-shadow:0 0 12px #facc15;animation:blink 1s ease-in-out infinite}
     @keyframes blink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.8)}}
 
-    /* Gauge */
-    .gauge-box{position:relative;width:260px;height:140px;margin:18px auto 6px;overflow:hidden}
+    /* Gauge: Correct 5-band Conic Gradient from left to right (0deg to 180deg) */
+    .gauge-box{position:relative;width:240px;height:120px;margin:18px auto 10px;overflow:hidden}
     .gauge-arc{
       position:absolute;inset:0;
-      border-top-left-radius:260px;border-top-right-radius:260px;
-      /* proportions based on EFFIS thresholds:
-         0-11.2 (22.4%), 11.2-21.3 (20.2%), 21.3-38 (33.4%), 38-50 (24%), 50-100 (50%)
-         We render 0..100 over 180deg.
-      */
+      border-top-left-radius:120px;border-top-right-radius:120px;
       background: conic-gradient(from 270deg,
-        #22c55e 0deg 40.32deg,
-        #eab308 40.32deg 76.68deg,
-        #f97316 76.68deg 136.8deg,
-        #ef4444 136.8deg 180deg
+        #22c55e 0deg 36deg,     /* کم: 0 تا 20% */
+        #eab308 36deg 72deg,    /* متوسط: 20 تا 40% */
+        #f97316 72deg 108deg,   /* زیاد: 40 تا 60% */
+        #ef4444 108deg 144deg,  /* خیلی زیاد: 60 تا 80% */
+        #9333ea 144deg 180deg   /* بحرانی: 80 تا 100% */
       );
       -webkit-mask: radial-gradient(circle at 50% 100%, transparent 62%, #fff 63%);
       mask: radial-gradient(circle at 50% 100%, transparent 62%, #fff 63%);
     }
-    /* Extreme band is shown as an overlay cap from 50..100 (right side half of arc) */
-    .gauge-extreme{
-      position:absolute;inset:0;
-      border-top-left-radius:260px;border-top-right-radius:260px;
-      background: conic-gradient(from 270deg,
-        transparent 0deg 180deg,
-        #9333ea 90deg 180deg
-      );
-      -webkit-mask: radial-gradient(circle at 50% 100%, transparent 62%, #fff 63%);
-      mask: radial-gradient(circle at 50% 100%, transparent 62%, #fff 63%);
-      opacity:.95;
-      pointer-events:none;
-    }
 
-    .needle{position:absolute;bottom:6px;left:50%;width:4px;height:110px;background:#18181b;transform-origin:bottom center;transform:translateX(-50%) rotate(-90deg);transition:transform 1.2s cubic-bezier(.2,.8,.2,1);border-radius:4px;box-shadow:0 0 6px rgba(0,0,0,.25)}
-    .hub{position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);width:18px;height:18px;background:#fff;border:4px solid #18181b;border-radius:50%}
+    .needle{position:absolute;bottom:0;left:120px;width:4px;height:100px;background:#18181b;transform-origin:bottom center;transform:translateX(-50%) rotate(-90deg);transition:transform 1.2s cubic-bezier(.2,.8,.2,1);border-radius:4px;box-shadow:0 0 6px rgba(0,0,0,.25)}
+    .hub{position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);width:18px;height:18px;background:#fff;border:4px solid #18181b;border-radius:50%}
 
-    .fwi-num{margin-top:10px;font-size:13px;font-weight:900;color:#7c2d12}
-    .fwi-num code{background:#fff; border:1px solid #fed7aa; padding:2px 8px; border-radius:10px}
+    .fwi-num{margin-top:8px;font-size:13px;font-weight:900;color:#7c2d12}
+    .fwi-num code{background:#fff;border:1px solid #fed7aa;padding:2px 8px;border-radius:10px}
 
     .sec{margin:0 14px 14px;padding:14px;border:1px solid #fed7aa;border-radius:16px;background:#fff7ed}
     .sec h2{margin:0 0 8px;font-size:13px;font-weight:950;color:#7c2d12}
@@ -81,7 +65,6 @@
 
     .gps-box{display:none;margin:0 14px 14px;padding:10px;border-radius:12px;border:1px solid #cbd5e1;font-size:11px;background:#fff}
     .gps-box code{background:#f1f5f9;padding:2px 6px;border-radius:6px}
-    .muted{opacity:.85}
   </style>
 </head>
 
@@ -103,15 +86,11 @@
 
       <div class="gauge-box" aria-label="شاخص خطر آتش‌سوزی">
         <div class="gauge-arc"></div>
-        <div class="gauge-extreme"></div>
         <div class="needle" id="needle"></div>
         <div class="hub"></div>
       </div>
 
       <div class="fwi-num">FWI: <code id="fwiValue">—</code></div>
-      <div class="muted" style="margin-top:6px;font-size:11px;font-weight:800;color:#9a3412">
-        آستانه‌ها (EFFIS): کم &lt; 11.2 | متوسط 11.2–21.3 | زیاد 21.3–38 | خیلی زیاد 38–50 | بحرانی &gt; 50
-      </div>
     </section>
 
     <section class="sec">
@@ -192,17 +171,16 @@
   }
 
   async function loadData(){
-    const res = await fetch(DATA_URL, { cache: "no-store" });
+    const res = await fetch(DATA_URL + "?t=" + Date.now(), { cache: "no-store" });
     if(!res.ok) throw new Error("Failed to fetch JSON: " + res.status);
     return await res.json();
   }
 
   function render(d){
-    // Force titles exactly as required (do NOT trust JSON for header)
-    // Subtitle fixed: کوهستان دراک
-
     const updateTime = document.getElementById("updateTime");
-    updateTime.textContent = d.updated_at ? ("آخرین بروزرسانی: " + d.updated_at) : "زمان بروزرسانی نامشخص";
+    // Support both updated_at and generated_at keys from JSON
+    const timeText = d.updated_at || d.generated_at;
+    updateTime.textContent = timeText ? ("آخرین بروزرسانی: " + timeText) : "زمان بروزرسانی نامشخص";
 
     const riskLevel = document.getElementById("riskLevel");
     const badge = document.getElementById("riskBadge");
@@ -224,17 +202,14 @@
     try{
       const d = await loadData();
       render(d);
-      // cache
-      try{ localStorage.setItem("derak_fwi_cache", JSON.stringify({t: Date.now(), d})); }catch(e){}
+      localStorage.setItem("derak_fwi_cache", JSON.stringify({t: Date.now(), d}));
     }catch(err){
       console.error(err);
-      // fallback to cache
       try{
         const cached = JSON.parse(localStorage.getItem("derak_fwi_cache") || "null");
         if(cached && cached.d){
           render(cached.d);
-          document.getElementById("updateTime").textContent =
-            "نمایش از حافظه مرورگر (آخرین داده ذخیره‌شده)";
+          document.getElementById("updateTime").textContent += " (ذخیره‌شده)";
           return;
         }
       }catch(e){}
