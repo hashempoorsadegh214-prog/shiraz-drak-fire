@@ -1,12 +1,12 @@
 {
   "area_id": "derak-mountain",
-  "area_name": "کوهستان دراک، ورودی شمالی",
-  "forecast_gregorian": "2026-10-21",
-  "forecast_shamsi": "1405-07-29",
-  "generated_at": "2026-10-21 12:00",
-  "fwi": 49.47,
-  "risk_level_fa": "خیلی زیاد",
-  "risk_level_en": "Very High",
-  "risk_color": "#ef4444",
-  "points_count": 137
+  "area_name": "کوهستان دراک",
+  "forecast_gregorian": "2026-10-22",
+  "forecast_shamsi": "1405/07/30",
+  "updated_at": "1405/07/30 - 03:03",
+  "fwi": 0.0,
+  "risk_level_fa": "کم",
+  "risk_level_en": "Low",
+  "risk_color": "#22c55e",
+  "points_count": 1
 }
