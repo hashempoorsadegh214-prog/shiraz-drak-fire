@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0b1711" />
+  <title>هشدار حریق | کوهستان دراک</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#0b1711;
+      --card:#0f231b;
+      --muted:#b8c7bd;
+      --text:#f8fafc;
+      --border:rgba(255,255,255,.12);
+      --risk:#64748b;
+      --risk-soft:rgba(100,116,139,.18);
+      --shadow: rgba(0,0,0,.35);
+      font-family: "Vazirmatn", Tahoma, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      padding:20px 14px 28px;
+      display:flex;
+      justify-content:center;
+      background:
+        radial-gradient(circle at top, #214334 0, #0b1711 55%, #07110c 100%);
+    }
+    .wrap{width:100%; max-width:480px}
+    .card{
+      border:1px solid var(--border);
+      border-radius:24px;
+      overflow:hidden;
+      background: color-mix(in srgb, var(--card) 92%, transparent);
+      box-shadow: 0 18px 60px var(--shadow);
+      backdrop-filter: blur(6px);
+    }
+    header{
+      padding:22px 18px 14px;
+      text-align:center;
+    }
+    .pill{
+      display:inline-block;
+      padding:6px 12px;
+      border-radius:999px;
+      border:1px solid rgba(250,204,21,.28);
+      background: rgba(250,204,21,.10);
+      color:#fde68a;
+      font-size:12px;
+      font-weight:700;
+    }
+    h1{margin:12px 0 6px; font-size:20px}
+    .sub{color:var(--muted); font-size:13px; line-height:1.8}
+
+    .panel{
+      margin:0 14px 14px;
+      padding:18px 14px;
+      border-radius:18px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      text-align:center;
+    }
+    .badge{
+      display:inline-block;
+      padding:7px 14px;
+      border-radius:999px;
+      background: var(--risk);
+      color:#fff;
+      font-weight:800;
+      font-size:13px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.25);
+    }
+    .meter{
+      margin:14px auto 8px;
+      height:12px;
+      width:100%;
+      border-radius:999px;
+      overflow:hidden;
+      background: linear-gradient(to left, #7f1d1d, #ef4444, #f97316, #eab308, #22c55e);
+      border: 1px solid rgba(255,255,255,.10);
+    }
+    .markerRow{position:relative; height:18px; margin-top:2px}
+    .marker{
+      position:absolute;
+      top:-6px;
+      right: calc(var(--pos) * 1%);
+      transform: translateX(50%);
+      width:14px; height:14px;
+      border-radius:50%;
+      border:3px solid #fff;
+      background: var(--risk);
+      box-shadow: 0 2px 14px rgba(0,0,0,.55);
+    }
+    .score{
+      margin-top:10px;
+      display:flex;
+      align-items:baseline;
+      justify-content:center;
+      gap:10px;
+    }
+    .score .num{
+      font-size:54px;
+      font-weight:900;
+      letter-spacing:-0.5px;
+      line-height:1;
+    }
+    .score .lbl{
+      color:var(--muted);
+      font-size:12px;
+      padding-bottom:6px;
+    }
+    .hint{
+      margin-top:8px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.9;
+    }
+
+    .sec{
+      margin:0 14px 14px;
+      padding:14px;
+      border-radius:16px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.03);
+    }
+    .sec h2{
+      margin:0 0 10px;
+      font-size:14px;
+      color:#fde68a;
+    }
+    ul{margin:0; padding-right:18px; color:#e2e8f0; font-size:13px; line-height:2}
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:8px;
+      margin-top:8px;
+    }
+    .call{
+      text-decoration:none;
+      color:#fff;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.05);
+      border-radius:14px;
+      padding:12px 8px;
+      text-align:center;
+    }
+    .call span{display:block; color:#cbd5e1; font-size:11px}
+    .call strong{display:block; margin-top:4px; font-size:20px}
+    .meta{
+      padding:0 16px 18px;
+      text-align:center;
+      color:var(--muted);
+      font-size:11px;
+      line-height:1.9;
+    }
+    .error{
+      display:none;
+      margin:14px;
+      padding:12px 12px;
+      border-radius:14px;
+      border:1px solid rgba(239,68,68,.35);
+      background: rgba(127,29,29,.35);
+      color:#fecaca;
+      font-size:13px;
+      line-height:1.9;
+    }
+
+    /* چاپ روی موبایل بهتر */
+    @media (max-width:360px){
+      h1{font-size:18px}
+      .score .num{font-size:46px}
+    }
+  </style>
+</head>
+
+<body>
+  <main class="wrap">
+    <section class="card">
+      <header>
+        <div class="pill">سامانه هشدار خطر آتش‌سوزی</div>
+        <h1 id="title">کوهستان دراک (شیراز)</h1>
+        <div class="sub">
+          وضعیت امروز به‌صورت خودکار به‌روزرسانی می‌شود.
+        </div>
+      </header>
+
+      <div class="panel" aria-live="polite">
+        <div class="badge" id="riskBadge">در حال دریافت…</div>
+
+        <div class="meter" aria-hidden="true"></div>
+        <div class="markerRow" aria-hidden="true">
+          <div class="marker" id="marker"></div>
+        </div>
+
+        <div class="score">
+          <div class="num" id="scoreNum">—</div>
+          <div class="lbl">شاخص خطر</div>
+        </div>
+
+        <div class="hint" id="shortHint">
+          لطفاً چند ثانیه صبر کنید…
+        </div>
+      </div>
+
+      <div class="sec">
+        <h2>اقدامات فوری و توصیه‌های ایمنی</h2>
+        <ul id="advice">
+          <li>در حال دریافت پیام‌ها…</li>
+        </ul>
+      </div>
+
+      <div class="sec">
+        <h2>تماس اضطراری</h2>
+        <div class="grid">
+          <a class="call" href="tel:125"><span>آتش‌نشانی</span><strong>۱۲۵</strong></a>
+          <a class="call" href="tel:110"><span>پلیس</span><strong>۱۱۰</strong></a>
+          <a class="call" href="tel:147"><span>منابع طبیعی</span><strong>۱۴۷</strong></a>
+        </div>
+      </div>
+
+      <div class="error" id="errorBox">
+        دریافت اطلاعات امروز ممکن نشد. لطفاً اینترنت را بررسی کنید یا چند دقیقه بعد دوباره امتحان کنید.
+      </div>
+
+      <div class="meta" id="metaLine">—</div>
+    </section>
+  </main>
+
+  <script>
+    // داده از همان فایل تولیدشده توسط GitHub Actions
+    const DATA_URL = "./data/derak_fwi.json";
+
+    // نگاشت سطح خطر به متن و توصیه‌ها (بدون ذکر نام FWI)
+    function adviceByLevel(levelFa) {
+      switch (levelFa) {
+        case "کم":
+          return {
+            hint: "خطر پایین است؛ با این حال مسئولانه رفتار کنید.",
+            items: [
+              "زباله و مواد قابل اشتعال را در طبیعت رها نکنید.",
+              "در صورت استفاده مجاز از آتش، از خاموش شدن کامل آن مطمئن شوید.",
+              "در صورت مشاهده دود، سریعاً گزارش کنید."
+            ]
+          };
+        case "متوسط":
+          return {
+            hint: "احتیاط لازم است؛ از اقدامات پرخطر خودداری کنید.",
+            items: [
+              "از روشن کردن آتش در طبیعت خودداری کنید.",
+              "ته‌سیگار/زغال/مواد داغ را رها نکنید.",
+              "در صورت مشاهده دود یا شعله، با ۱۲۵ یا ۱۴۷ تماس بگیرید."
+            ]
+          };
+        case "زیاد":
+          return {
+            hint: "خطر بالاست؛ هرگونه آتش می‌تواند حادثه‌ساز شود.",
+            items: [
+              "روشن کردن آتش، پخت‌وپز و استعمال دخانیات در طبیعت ممنوع/خطرناک است.",
+              "از مسیرهای پرپوشش گیاهی دوری کنید.",
+              "در صورت مشاهده دود یا شعله، فوراً با ۱۲۵/۱۴۷ تماس بگیرید."
+            ]
+          };
+        case "خیلی زیاد":
+          return {
+            hint: "خطر بسیار بالاست؛ از حضور غیرضروری خودداری کنید.",
+            items: [
+              "از حضور غیرضروری در محدوده خودداری کنید.",
+              "هرگونه آتش، ذغال، جرقه و استعمال دخانیات بسیار خطرناک است.",
+              "در صورت مشاهده دود/شعله، سریعاً تماس بگیرید و موقعیت را اعلام کنید."
+            ]
+          };
+        case "بحرانی":
+          return {
+            hint: "وضعیت بحرانی است؛ احتمال گسترش سریع آتش‌سوزی بسیار بالاست.",
+            items: [
+              "از ورود/توقف غیرضروری در منطقه خودداری کنید.",
+              "روشن کردن آتش و استعمال دخانیات اکیداً ممنوع است.",
+              "در صورت مشاهده دود یا شعله: سریعاً ۱۲۵ و ۱۴۷ را مطلع کنید."
+            ]
+          };
+        default:
+          return {
+            hint: "سطح خطر نامشخص است؛ با احتیاط کامل رفتار کنید.",
+            items: [
+              "از هرگونه آتش و رفتار پرخطر خودداری کنید.",
+              "در صورت مشاهده دود/شعله با شماره‌های اضطراری تماس بگیرید."
+            ]
+          };
+      }
+    }
+
+    function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+
+    function render(data) {
+      // مقدار عددی (در فایل با کلید fwi ذخیره می‌شود، ولی ما آن را فقط «شاخص خطر» نشان می‌دهیم)
+      const v = Number(data.fwi);
+      if (!Number.isFinite(v)) throw new Error("Invalid number");
+
+      const levelFa = data.risk_level_fa || "نامشخص";
+      const color = data.risk_color || "#64748b";
+
+      // رنگ‌ها
+      document.documentElement.style.setProperty("--risk", color);
+
+      // جایگاه نشانگر روی نوار (۰ تا ۱۰۰ نمایشی)
+      const pos = clamp((v / 100) * 100, 2, 98);
+      document.documentElement.style.setProperty("--pos", String(pos));
+
+      // عنوان
+      document.getElementById("title").textContent = data.area_name || "کوهستان دراک (شیراز)";
+
+      // وضعیت
+      document.getElementById("riskBadge").textContent = `سطح خطر: ${levelFa}`;
+
+      // عدد شاخص (بدون ذکر نام FWI)
+      document.getElementById("scoreNum").textContent = v.toFixed(1);
+
+      // توصیه‌ها
+      const pack = adviceByLevel(levelFa);
+      document.getElementById("shortHint").textContent = pack.hint;
+      document.getElementById("advice").innerHTML =
+        pack.items.map(x => `<li>${x}</li>`).join("");
+
+      // متادیتا
+      const d = data.forecast_shamsi || data.forecast_gregorian || "";
+      const gen = data.generated_at || "";
+      const pts = (typeof data.points_count === "number") ? data.points_count : "";
+      const parts = [];
+      if (d) parts.push(`تاریخ: ${d}`);
+      if (gen) parts.push(`به‌روزرسانی: ${gen}`);
+      if (pts !== "") parts.push(`نمونه‌برداری: ${pts} نقطه`);
+      document.getElementById("metaLine").textContent = parts.join(" | ");
+    }
+
+    fetch(DATA_URL, { cache: "no-store" })
+      .then(r => { if (!r.ok) throw new Error("No data"); return r.json(); })
+      .then(render)
+      .catch(err => {
+        console.error(err);
+        document.getElementById("riskBadge").textContent = "اطلاعات در دسترس نیست";
+        document.getElementById("shortHint").textContent = "فعلاً امکان دریافت داده وجود ندارد.";
+        document.getElementById("errorBox").style.display = "block";
+        document.getElementById("metaLine").textContent = "—";
+      });
+  </script>
+</body>
+</html>
