@@ -3,23 +3,22 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#0b1711" />
+  <meta name="theme-color" content="#f8fafc" />
   <title>هشدار حریق | کوهستان دراک</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 
   <style>
     :root{
-      --bg:#0b1711;
-      --card:#0f231b;
-      --muted:#b8c7bd;
-      --text:#f8fafc;
-      --border:rgba(255,255,255,.12);
-      --risk:#64748b;
-      --risk-soft:rgba(100,116,139,.18);
-      --shadow: rgba(0,0,0,.35);
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --muted: #475569;
+      --text: #0f172a;
+      --border: #e2e8f0;
+      --risk: #dc2626;
+      --shadow: rgba(15, 23, 42, 0.08);
       font-family: "Vazirmatn", Tahoma, sans-serif;
       color: var(--text);
       background: var(--bg);
@@ -28,115 +27,120 @@
     body{
       margin:0;
       min-height:100vh;
-      padding:20px 14px 28px;
+      padding:16px 12px 24px;
       display:flex;
       justify-content:center;
-      background:
-        radial-gradient(circle at top, #214334 0, #0b1711 55%, #07110c 100%);
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
     }
     .wrap{width:100%; max-width:480px}
     .card{
       border:1px solid var(--border);
       border-radius:24px;
       overflow:hidden;
-      background: color-mix(in srgb, var(--card) 92%, transparent);
-      box-shadow: 0 18px 60px var(--shadow);
-      backdrop-filter: blur(6px);
+      background: var(--card);
+      box-shadow: 0 12px 40px var(--shadow);
     }
     header{
-      padding:22px 18px 14px;
+      padding:20px 16px 10px;
       text-align:center;
+      background: #fffbeb;
+      border-bottom: 1px solid #fef3c7;
     }
     .pill{
       display:inline-block;
-      padding:6px 12px;
+      padding:6px 14px;
       border-radius:999px;
-      border:1px solid rgba(250,204,21,.28);
-      background: rgba(250,204,21,.10);
-      color:#fde68a;
+      background: #f59e0b;
+      color:#ffffff;
       font-size:12px;
-      font-weight:700;
+      font-weight:800;
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
     }
-    h1{margin:12px 0 6px; font-size:20px}
-    .sub{color:var(--muted); font-size:13px; line-height:1.8}
+    h1{margin:10px 0 4px; font-size:20px; color:#1e293b; font-weight:800;}
+    .sub{color:var(--muted); font-size:13px; line-height:1.6}
 
     .panel{
-      margin:0 14px 14px;
+      margin:14px;
       padding:18px 14px;
-      border-radius:18px;
+      border-radius:20px;
       border:1px solid var(--border);
-      background: rgba(255,255,255,.04);
+      background: #fff;
       text-align:center;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.03);
     }
     .badge{
       display:inline-block;
-      padding:7px 14px;
+      padding:8px 18px;
       border-radius:999px;
       background: var(--risk);
       color:#fff;
-      font-weight:800;
-      font-size:13px;
-      box-shadow: 0 8px 24px rgba(0,0,0,.25);
+      font-weight:900;
+      font-size:14px;
+      box-shadow: 0 6px 20px rgba(220, 38, 38, 0.35);
     }
     .meter{
-      margin:14px auto 8px;
-      height:12px;
+      margin:16px auto 8px;
+      height:14px;
       width:100%;
       border-radius:999px;
       overflow:hidden;
       background: linear-gradient(to left, #7f1d1d, #ef4444, #f97316, #eab308, #22c55e);
-      border: 1px solid rgba(255,255,255,.10);
+      border: 1px solid rgba(0,0,0,.08);
     }
     .markerRow{position:relative; height:18px; margin-top:2px}
     .marker{
       position:absolute;
-      top:-6px;
+      top:-7px;
       right: calc(var(--pos) * 1%);
       transform: translateX(50%);
-      width:14px; height:14px;
+      width:16px; height:16px;
       border-radius:50%;
-      border:3px solid #fff;
+      border:3px solid #ffffff;
       background: var(--risk);
-      box-shadow: 0 2px 14px rgba(0,0,0,.55);
+      box-shadow: 0 3px 10px rgba(0,0,0,0.3);
     }
     .score{
-      margin-top:10px;
+      margin-top:6px;
       display:flex;
       align-items:baseline;
       justify-content:center;
-      gap:10px;
+      gap:8px;
     }
     .score .num{
-      font-size:54px;
+      font-size:56px;
       font-weight:900;
-      letter-spacing:-0.5px;
+      color: #0f172a;
+      letter-spacing:-1px;
       line-height:1;
     }
     .score .lbl{
       color:var(--muted);
-      font-size:12px;
+      font-size:13px;
+      font-weight:600;
       padding-bottom:6px;
     }
     .hint{
       margin-top:8px;
-      color:var(--muted);
-      font-size:12px;
-      line-height:1.9;
+      color: #334155;
+      font-size:13px;
+      font-weight:600;
+      line-height:1.8;
     }
 
     .sec{
       margin:0 14px 14px;
-      padding:14px;
-      border-radius:16px;
+      padding:16px;
+      border-radius:18px;
       border:1px solid var(--border);
-      background: rgba(255,255,255,.03);
+      background: #f8fafc;
     }
     .sec h2{
       margin:0 0 10px;
       font-size:14px;
-      color:#fde68a;
+      color:#b45309;
+      font-weight:800;
     }
-    ul{margin:0; padding-right:18px; color:#e2e8f0; font-size:13px; line-height:2}
+    ul{margin:0; padding-right:18px; color:#334155; font-size:13px; line-height:2.1; font-weight:600;}
     .grid{
       display:grid;
       grid-template-columns: repeat(3, 1fr);
@@ -145,38 +149,33 @@
     }
     .call{
       text-decoration:none;
-      color:#fff;
-      border:1px solid rgba(255,255,255,.14);
-      background: rgba(255,255,255,.05);
+      color:#0f172a;
+      border:1px solid #cbd5e1;
+      background: #ffffff;
       border-radius:14px;
-      padding:12px 8px;
+      padding:12px 6px;
       text-align:center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     }
-    .call span{display:block; color:#cbd5e1; font-size:11px}
-    .call strong{display:block; margin-top:4px; font-size:20px}
+    .call span{display:block; color:var(--muted); font-size:11px; font-weight:600;}
+    .call strong{display:block; margin-top:2px; font-size:18px; font-weight:900; color:#dc2626;}
     .meta{
       padding:0 16px 18px;
       text-align:center;
       color:var(--muted);
       font-size:11px;
-      line-height:1.9;
+      line-height:1.8;
     }
     .error{
       display:none;
       margin:14px;
-      padding:12px 12px;
+      padding:12px;
       border-radius:14px;
-      border:1px solid rgba(239,68,68,.35);
-      background: rgba(127,29,29,.35);
-      color:#fecaca;
+      border:1px solid #fca5a5;
+      background: #fef2f2;
+      color: #991b1b;
       font-size:13px;
-      line-height:1.9;
-    }
-
-    /* چاپ روی موبایل بهتر */
-    @media (max-width:360px){
-      h1{font-size:18px}
-      .score .num{font-size:46px}
+      line-height:1.8;
     }
   </style>
 </head>
@@ -187,9 +186,7 @@
       <header>
         <div class="pill">سامانه هشدار خطر آتش‌سوزی</div>
         <h1 id="title">کوهستان دراک (شیراز)</h1>
-        <div class="sub">
-          وضعیت امروز به‌صورت خودکار به‌روزرسانی می‌شود.
-        </div>
+        <div class="sub">وضعیت ایمنی روزانه طبیعت کوهستان</div>
       </header>
 
       <div class="panel" aria-live="polite">
@@ -205,9 +202,7 @@
           <div class="lbl">شاخص خطر</div>
         </div>
 
-        <div class="hint" id="shortHint">
-          لطفاً چند ثانیه صبر کنید…
-        </div>
+        <div class="hint" id="shortHint">لطفاً چند ثانیه صبر کنید…</div>
       </div>
 
       <div class="sec">
@@ -235,10 +230,8 @@
   </main>
 
   <script>
-    // داده از همان فایل تولیدشده توسط GitHub Actions
     const DATA_URL = "./data/derak_fwi.json";
 
-    // نگاشت سطح خطر به متن و توصیه‌ها (بدون ذکر نام FWI)
     function adviceByLevel(levelFa) {
       switch (levelFa) {
         case "کم":
@@ -246,7 +239,7 @@
             hint: "خطر پایین است؛ با این حال مسئولانه رفتار کنید.",
             items: [
               "زباله و مواد قابل اشتعال را در طبیعت رها نکنید.",
-              "در صورت استفاده مجاز از آتش، از خاموش شدن کامل آن مطمئن شوید.",
+              "از خاموش شدن کامل هرگونه پسماند حرارتی مطمئن شوید.",
               "در صورت مشاهده دود، سریعاً گزارش کنید."
             ]
           };
@@ -255,43 +248,43 @@
             hint: "احتیاط لازم است؛ از اقدامات پرخطر خودداری کنید.",
             items: [
               "از روشن کردن آتش در طبیعت خودداری کنید.",
-              "ته‌سیگار/زغال/مواد داغ را رها نکنید.",
-              "در صورت مشاهده دود یا شعله، با ۱۲۵ یا ۱۴۷ تماس بگیرید."
+              "ته‌سیگار یا مواد داغ را رها نکنید.",
+              "در صورت مشاهده دود یا شعله با ۱۲۵ یا ۱۴۷ تماس بگیرید."
             ]
           };
         case "زیاد":
           return {
             hint: "خطر بالاست؛ هرگونه آتش می‌تواند حادثه‌ساز شود.",
             items: [
-              "روشن کردن آتش، پخت‌وپز و استعمال دخانیات در طبیعت ممنوع/خطرناک است.",
-              "از مسیرهای پرپوشش گیاهی دوری کنید.",
-              "در صورت مشاهده دود یا شعله، فوراً با ۱۲۵/۱۴۷ تماس بگیرید."
+              "روشن کردن آتش و استعمال دخانیات در طبیعت ممنوع و خطرناک است.",
+              "از مسیرهای پرپوشش گیاهی خشک دوری کنید.",
+              "در صورت مشاهده دود یا شعله فوراً با ۱۲۵ یا ۱۴۷ تماس بگیرید."
             ]
           };
         case "خیلی زیاد":
           return {
             hint: "خطر بسیار بالاست؛ از حضور غیرضروری خودداری کنید.",
             items: [
-              "از حضور غیرضروری در محدوده خودداری کنید.",
-              "هرگونه آتش، ذغال، جرقه و استعمال دخانیات بسیار خطرناک است.",
-              "در صورت مشاهده دود/شعله، سریعاً تماس بگیرید و موقعیت را اعلام کنید."
+              "از حضور غیرضروری در محدوده پوشش گیاهی متراکم خودداری کنید.",
+              "هرگونه آتش، ذغال و استعمال دخانیات ممنوع است.",
+              "در صورت مشاهده دود سریعاً تماس بگیرید."
             ]
           };
         case "بحرانی":
           return {
-            hint: "وضعیت بحرانی است؛ احتمال گسترش سریع آتش‌سوزی بسیار بالاست.",
+            hint: "وضعیت بحرانی است؛ احتمال گسترش سریع آتش بسیار بالا است.",
             items: [
-              "از ورود/توقف غیرضروری در منطقه خودداری کنید.",
+              "از ورود و توقف در مناطق مستعد آتش‌سوزی خودداری کنید.",
               "روشن کردن آتش و استعمال دخانیات اکیداً ممنوع است.",
-              "در صورت مشاهده دود یا شعله: سریعاً ۱۲۵ و ۱۴۷ را مطلع کنید."
+              "در صورت مشاهده کوچک‌ترین دود فوری با ۱۲۵ و ۱۴۷ تماس بگیرید."
             ]
           };
         default:
           return {
-            hint: "سطح خطر نامشخص است؛ با احتیاط کامل رفتار کنید.",
+            hint: "با احتیاط کامل در طبیعت تردد کنید.",
             items: [
-              "از هرگونه آتش و رفتار پرخطر خودداری کنید.",
-              "در صورت مشاهده دود/شعله با شماره‌های اضطراری تماس بگیرید."
+              "از هرگونه رفتار پرخطر خودداری کنید.",
+              "در صورت مشاهده آتش یا دود با شماره‌های اضطراری تماس بگیرید."
             ]
           };
       }
@@ -300,36 +293,26 @@
     function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
 
     function render(data) {
-      // مقدار عددی (در فایل با کلید fwi ذخیره می‌شود، ولی ما آن را فقط «شاخص خطر» نشان می‌دهیم)
       const v = Number(data.fwi);
       if (!Number.isFinite(v)) throw new Error("Invalid number");
 
       const levelFa = data.risk_level_fa || "نامشخص";
-      const color = data.risk_color || "#64748b";
+      let color = data.risk_color || "#dc2626";
+      if (color === "#7f1d1d") color = "#b91c1c"; // برای خوانایی بهتر در روز
 
-      // رنگ‌ها
       document.documentElement.style.setProperty("--risk", color);
-
-      // جایگاه نشانگر روی نوار (۰ تا ۱۰۰ نمایشی)
       const pos = clamp((v / 100) * 100, 2, 98);
       document.documentElement.style.setProperty("--pos", String(pos));
 
-      // عنوان
       document.getElementById("title").textContent = data.area_name || "کوهستان دراک (شیراز)";
-
-      // وضعیت
       document.getElementById("riskBadge").textContent = `سطح خطر: ${levelFa}`;
-
-      // عدد شاخص (بدون ذکر نام FWI)
       document.getElementById("scoreNum").textContent = v.toFixed(1);
 
-      // توصیه‌ها
       const pack = adviceByLevel(levelFa);
       document.getElementById("shortHint").textContent = pack.hint;
       document.getElementById("advice").innerHTML =
         pack.items.map(x => `<li>${x}</li>`).join("");
 
-      // متادیتا
       const d = data.forecast_shamsi || data.forecast_gregorian || "";
       const gen = data.generated_at || "";
       const pts = (typeof data.points_count === "number") ? data.points_count : "";
