@@ -3,7 +3,8 @@ name: Update FWI Derak
 on:
   workflow_dispatch:
   schedule:
-    - cron: "30 20 * * *"
+    # ساعت ۲۱:۰۰ یوتی‌سی = ساعت ۰۰:۳۰ بامداد به وقت رسمی ایران
+    - cron: "0 21 * * *"
 
 permissions:
   contents: write
@@ -48,9 +49,10 @@ jobs:
           GRID_STEP = 0.01  # degrees
           OUTPUT_FILE = "data/derak_fwi.json"
 
+          # تنظیم زمان ایران با حاشیه امن
           IRAN_TZ = timezone(timedelta(hours=3, minutes=30))
           now = datetime.now(IRAN_TZ)
-          target = now  # forecast day (same day)
+          target = now
           target_date = target.strftime("%Y-%m-%d")
 
           def gregorian_to_jalali(gy, gm, gd):
@@ -108,7 +110,6 @@ jobs:
                           return float(valtxt)
                       except Exception:
                           return None
-              # fallback: try any number in html
               import re
               m = re.search(r"([0-9]+(\.[0-9]+)?)", soup.get_text(" ", strip=True))
               if m:
@@ -123,8 +124,7 @@ jobs:
 
           def get_fwi(lon, lat):
               x, y = lonlat_to_3857(lon, lat)
-              # small bbox around point so GetFeatureInfo works
-              half = 5000  # meters
+              half = 5000
               minx, maxx = x - half, x + half
               miny, maxy = y - half, y + half
               bbox = f"{minx},{miny},{maxx},{maxy}"
@@ -178,7 +178,6 @@ jobs:
               lat += GRID_STEP
 
           if not points:
-              # fallback point near Derak
               points = [(52.43, 29.68)]
 
           values = []
@@ -191,7 +190,6 @@ jobs:
               results.append({"lon": lon, "lat": lat, "fwi": v})
 
           if not values:
-              # last resort: keep workflow alive with a safe placeholder
               values = [0.0]
               results = [{"lon": 52.43, "lat": 29.68, "fwi": 0.0}]
 
@@ -208,7 +206,7 @@ jobs:
 
           out = {
               "area_id": "derak-mountain",
-              "area_name": "کوهستان دراک",  # <- مهم: بدون «ورودی شمالی»
+              "area_name": "کوهستان دراک",
               "forecast_gregorian": target_date,
               "forecast_shamsi": shamsi_date,
               "updated_at": updated_at_fa,
@@ -217,6 +215,7 @@ jobs:
               "risk_level_en": en_risk,
               "risk_color": color,
               "points_count": len(results),
+              "last_epoch": int(now.timestamp())
           }
 
           with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
@@ -232,9 +231,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/derak_fwi.json
-          if git diff --cached --quiet; then
-            echo "No changes to commit."
-            exit 0
-          fi
-          git commit -m "Update daily Derak FWI forecast (Derak title only)"
+          git commit -m "Auto update daily Derak FWI forecast" || echo "No changes to commit"
           git push
