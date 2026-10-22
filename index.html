@@ -10,10 +10,11 @@
         body { font-family: 'Vazirmatn', sans-serif; }
     </style>
 </head>
+
 <body class="bg-gradient-to-br from-amber-50 via-rose-100 to-orange-100 min-h-screen flex items-center justify-center p-4">
 
     <div class="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl border border-rose-200 w-full max-w-md overflow-hidden p-6 text-center">
-        
+
         <!-- Header -->
         <div class="bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 text-white p-4 rounded-2xl shadow-md mb-4">
             <h1 class="text-lg font-bold">سامانه هوشمند هشدار خطر وقوع حریق</h1>
@@ -34,7 +35,7 @@
         <!-- Status Panel -->
         <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-4 shadow-inner">
             <div id="updated-at" class="text-xs text-slate-500 mb-2">در حال دریافت تاریخ بروزرسانی...</div>
-            
+
             <div id="risk-badge" class="inline-block px-4 py-1.5 rounded-full text-white text-xs font-bold mb-3 shadow" style="background-color: #94a3b8;">
                 در حال دریافت...
             </div>
@@ -42,14 +43,15 @@
             <!-- SVG Gauge -->
             <div class="relative w-48 h-28 mx-auto mb-2 overflow-hidden">
                 <svg viewBox="0 0 200 110" class="w-full h-full">
-                    <!-- 5 Bands Arc -->
-                    <path d="M 20 100 A 80 80 0 0 1 50 42" fill="none" stroke="#22c55e" stroke-width="16" stroke-linecap="round"/>
-                    <path d="M 50 42 A 80 80 0 0 1 100 20" fill="none" stroke="#eab308" stroke-width="16"/>
-                    <path d="M 100 20 A 80 80 0 0 1 150 42" fill="none" stroke="#f97316" stroke-width="16"/>
-                    <path d="M 150 42 A 80 80 0 0 1 180 100" fill="none" stroke="#ef4444" stroke-width="16"/>
-                    <path d="M 165 65 A 80 80 0 0 1 180 100" fill="none" stroke="#9333ea" stroke-width="16" stroke-linecap="round"/>
+                    <!-- 5 equal bands (36 degrees each), from left (180deg) to right (0deg) -->
+                    <path d="M 20 100 A 80 80 0 0 1 35.3 53.1" fill="none" stroke="#22c55e" stroke-width="16" stroke-linecap="round"/>
+                    <path d="M 35.3 53.1 A 80 80 0 0 1 76.4 24.9" fill="none" stroke="#eab308" stroke-width="16"/>
+                    <path d="M 76.4 24.9 A 80 80 0 0 1 123.6 24.9" fill="none" stroke="#f97316" stroke-width="16"/>
+                    <path d="M 123.6 24.9 A 80 80 0 0 1 164.7 53.1" fill="none" stroke="#ef4444" stroke-width="16"/>
+                    <path d="M 164.7 53.1 A 80 80 0 0 1 180 100" fill="none" stroke="#9333ea" stroke-width="16" stroke-linecap="round"/>
+
                     <!-- Needle -->
-                    <line id="needle" x1="100" y1="100" x2="140" y2="60" stroke="#1e293b" stroke-width="4" stroke-linecap="round"/>
+                    <line id="needle" x1="100" y1="100" x2="100" y2="35" stroke="#1e293b" stroke-width="4" stroke-linecap="round"/>
                     <circle cx="100" cy="100" r="6" fill="#1e293b"/>
                 </svg>
             </div>
@@ -93,29 +95,37 @@
     </div>
 
     <script>
+        function clamp01(x) { return Math.min(Math.max(x, 0), 1); }
+
         async function loadFWI() {
             try {
-                let res = await fetch('./data/derak_fwi.json?t=' + new Date().getTime());
+                const res = await fetch('./data/derak_fwi.json?t=' + new Date().getTime());
                 if (!res.ok) throw new Error("فایل داده یافت نشد");
-                let data = await res.json();
+                const data = await res.json();
 
                 // Update Date & Time
-                document.getElementById('updated-at').innerText = `آخرین بروزرسانی: ${data.updated_at || data.forecast_shamsi}`;
+                const updatedText = data.updated_at || data.forecast_shamsi || 'نامشخص';
+                document.getElementById('updated-at').innerText = `آخرین بروزرسانی: ${updatedText}`;
 
                 // Update Badge
-                let badge = document.getElementById('risk-badge');
-                badge.innerText = data.risk_level_fa;
-                badge.style.backgroundColor = data.risk_color || '#9333ea';
+                const badge = document.getElementById('risk-badge');
+                badge.innerText = data.risk_level_fa || 'نامشخص';
+                badge.style.backgroundColor = data.risk_color || '#94a3b8';
 
-                // Needle position based on FWI (approx 0 to 60 scale mapped to angles)
-                let fwi = data.fwi || 0;
-                let angle = -90 + Math.min(Math.max(fwi / 60, 0), 1) * 180;
-                let rad = angle * Math.PI / 180;
-                let nx = 100 + 45 * Math.cos(rad);
-                let ny = 100 + 45 * Math.sin(rad);
-                let needle = document.getElementById('needle');
-                needle.setAttribute('x2', nx);
-                needle.setAttribute('y2', ny);
+                // Needle: FWI 0..60 mapped to 180deg(left/low) -> 0deg(right/critical)
+                const fwi = (typeof data.fwi === 'number') ? data.fwi : 0;
+                const ratio = clamp01(fwi / 60);
+
+                const angleDeg = 180 - ratio * 180;    // 180 -> 0
+                const rad = angleDeg * Math.PI / 180;
+
+                // center at (100,100), needle length 70
+                const nx = 100 + 70 * Math.cos(rad);
+                const ny = 100 - 70 * Math.sin(rad);   // SVG Y axis is downward
+
+                const needle = document.getElementById('needle');
+                needle.setAttribute('x2', nx.toFixed(2));
+                needle.setAttribute('y2', ny.toFixed(2));
 
             } catch (err) {
                 console.error(err);
@@ -124,19 +134,23 @@
         }
 
         function getGPS() {
-            let status = document.getElementById('gps-status');
+            const status = document.getElementById('gps-status');
             if (!navigator.geolocation) {
                 status.innerText = "مرورگر شما از GPS پشتیبانی نمی‌کند.";
                 return;
             }
             status.innerText = "در حال دریافت موقعیت مکانی...";
             navigator.geolocation.getCurrentPosition(pos => {
-                let lat = pos.coords.latitude.toFixed(5);
-                let lon = pos.coords.longitude.toFixed(5);
-                let mapsUrl = `https://www.google.com/maps?q=${lat},${lon}`;
+                const lat = pos.coords.latitude.toFixed(5);
+                const lon = pos.coords.longitude.toFixed(5);
+                const mapsUrl = `https://www.google.com/maps?q=${lat},${lon}`;
                 status.innerHTML = `موقعیت: <a href="${mapsUrl}" target="_blank" class="text-blue-600 underline font-bold">مشاهده در نقشه</a>`;
                 if (navigator.share) {
-                    navigator.share({ title: 'موقعیت اضطراری دراک', text: `موقعیت من در کوهستان دراک: ${mapsUrl}`, url: mapsUrl }).catch(()=>{});
+                    navigator.share({
+                        title: 'موقعیت اضطراری دراک',
+                        text: `موقعیت من در کوهستان دراک: ${mapsUrl}`,
+                        url: mapsUrl
+                    }).catch(() => {});
                 }
             }, () => {
                 status.innerText = "خطا در دریافت موقعیت. دسترسی GPS را بررسی کنید.";
@@ -145,5 +159,6 @@
 
         loadFWI();
     </script>
+
 </body>
 </html>
