@@ -3,7 +3,6 @@ name: Update FWI Derak
 on:
   workflow_dispatch:
   schedule:
-    # ساعت ۲۱:۰۰ یوتی‌سی = ساعت ۰۰:۳۰ بامداد به وقت رسمی ایران
     - cron: "0 21 * * *"
 
 permissions:
@@ -43,15 +42,16 @@ jobs:
           import re
 
           WMS_URL = "https://maps.effis.emergency.copernicus.eu/gwis"
-          LAYER = "ecmwf.fwi"   # لایه درست
-          GRID_STEP = 0.01      # degrees
+          LAYER = "ecmwf.fwi"
+          # لایه کوئری اصلاح شد (بر اساس استانداردهای EFFIS WMS)
+          QUERY_LAYER = "ecmwf.query" 
+
+          GRID_STEP = 0.01
           OUTPUT_FILE = "data/derak_fwi.json"
 
-          # تنظیم زمان ایران
           IRAN_TZ = timezone(timedelta(hours=3, minutes=30))
           now = datetime.now(IRAN_TZ)
 
-          # تاریخ‌های هدف: امروز + اگر نبود دیروز
           target_dates = [
               now.strftime("%Y-%m-%d"),
               (now - timedelta(days=1)).strftime("%Y-%m-%d")
@@ -96,8 +96,6 @@ jobs:
 
           def parse_fwi(html):
               soup = BeautifulSoup(html, "html.parser")
-
-              # تلاش ۱: جدول
               for row in soup.find_all("tr"):
                   cells = row.find_all("td")
                   if len(cells) < 2:
@@ -109,8 +107,6 @@ jobs:
                           return float(valtxt)
                       except Exception:
                           return None
-
-              # تلاش ۲: اولین عدد
               txt = soup.get_text(" ", strip=True)
               m = re.search(r"([0-9]+(\.[0-9]+)?)", txt)
               if m:
@@ -121,7 +117,7 @@ jobs:
               return None
 
           session = requests.Session()
-          session.headers.update({"User-Agent": "DERAK-FWI/1.1"})
+          session.headers.update({"User-Agent": "DERAK-FWI/1.2"})
 
           def get_fwi_for_time(lon, lat, time_iso):
               x, y = lonlat_to_3857(lon, lat)
@@ -135,7 +131,7 @@ jobs:
                   "VERSION": "1.1.1",
                   "REQUEST": "GetFeatureInfo",
                   "LAYERS": LAYER,
-                  "QUERY_LAYERS": LAYER,   # ✅ اصلاح کلیدی: باید همان LAYER باشد
+                  "QUERY_LAYERS": QUERY_LAYER,  # استفاده از ecmwf.query
                   "STYLES": "",
                   "SRS": "EPSG:3857",
                   "BBOX": bbox,
@@ -154,7 +150,7 @@ jobs:
               if r.status_code != 200:
                   return None, r.status_code, None
               v = parse_fwi(r.text)
-              return v, r.status_code, r.text[:2000]  # بخشی از پاسخ برای دیباگ
+              return v, r.status_code, r.text[:2000]
 
           def risk_class(value):
               if value < 11.2: return "کم", "Low", "#22c55e"
@@ -176,7 +172,6 @@ jobs:
 
           minx, miny, maxx, maxy = geom.bounds
 
-          # نمونه‌برداری داخل پلیگون
           points = []
           lat = miny
           while lat <= maxy + 1e-9:
@@ -188,9 +183,7 @@ jobs:
                   lon += GRID_STEP
               lat += GRID_STEP
 
-          # اگر خیلی کم بود، یک بافر خیلی کوچک برای گرفتن چند نقطه اطراف
           if len(points) < 3:
-              # افزایش محدوده نمونه‌برداری اطراف bounds به اندازه 0.02 درجه
               pad = 0.02
               minx2, miny2, maxx2, maxy2 = minx - pad, miny - pad, maxx + pad, maxy + pad
               lat = miny2
@@ -201,7 +194,6 @@ jobs:
                       lon += GRID_STEP
                   lat += GRID_STEP
 
-          # حذف تکراری‌ها
           points = list(dict.fromkeys(points))
 
           results = []
@@ -209,7 +201,6 @@ jobs:
           used_time = None
           debug_samples = []
 
-          # تلاش برای هر نقطه با TIME های مختلف (امروز/دیروز)
           for lon, lat in points:
               got = False
               for t in target_dates:
@@ -238,7 +229,7 @@ jobs:
                   "risk_color": "#94a3b8",
                   "points_count": 0,
                   "last_epoch": int(now.timestamp()),
-                  "error": "No valid GetFeatureInfo results (possibly TIME not available yet or WMS response format changed).",
+                  "error": "Query layer returned exception.",
                   "debug_samples": debug_samples
               }
               with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
@@ -268,7 +259,6 @@ jobs:
               json.dump(out, f, ensure_ascii=False, indent=2)
 
           print("DERAK FWI JSON SAVED SUCCESSFULLY!")
-          print(f"Used TIME: {used_time} | points used: {len(results)} | mean fwi: {mean_val}")
           PY
 
           python request_fwi.py
