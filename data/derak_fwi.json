@@ -3,11 +3,29 @@
   "area_name": "کوهستان دراک",
   "forecast_gregorian": "2026-10-22",
   "forecast_shamsi": "1405/07/30",
-  "updated_at": "1405/07/30 - 15:07",
-  "fwi": 0.0,
-  "risk_level_fa": "کم",
-  "risk_level_en": "Low",
-  "risk_color": "#22c55e",
-  "points_count": 1,
-  "last_epoch": 1792669048
+  "updated_at": "1405/07/30 - 15:21",
+  "fwi": null,
+  "risk_level_fa": "نامشخص",
+  "risk_level_en": "No Data",
+  "risk_color": "#94a3b8",
+  "points_count": 0,
+  "last_epoch": 1792669889,
+  "error": "No valid GetFeatureInfo results (possibly TIME not available yet or WMS response format changed).",
+  "debug_samples": [
+    {
+      "time": "2026-10-22",
+      "status": 200,
+      "sample": "<?xml version='1.0' encoding=\"UTF-8\" standalone=\"no\" ?>\n<!DOCTYPE ServiceExceptionReport SYSTEM \"http://schemas.opengis.net/wms/1.1.1/exception_1_1_1.dtd\">\n<ServiceExceptionReport version=\"1.1.1\">\n<ServiceException code=\"LayerNotDefined\">\nmsWMSFeatureInfo(): WMS server error. Layer(s) specified in QUERY_LAYERS parameter is not offered by the service instance.\n</ServiceException>\n</ServiceExceptionReport>\n"
+    },
+    {
+      "time": "2026-10-21",
+      "status": 200,
+      "sample": "<?xml version='1.0' encoding=\"UTF-8\" standalone=\"no\" ?>\n<!DOCTYPE ServiceExceptionReport SYSTEM \"http://schemas.opengis.net/wms/1.1.1/exception_1_1_1.dtd\">\n<ServiceExceptionReport version=\"1.1.1\">\n<ServiceException code=\"LayerNotDefined\">\nmsWMSFeatureInfo(): WMS server error. Layer(s) specified in QUERY_LAYERS parameter is not offered by the service instance.\n</ServiceException>\n</ServiceExceptionReport>\n"
+    },
+    {
+      "time": "2026-10-22",
+      "status": 200,
+      "sample": "<?xml version='1.0' encoding=\"UTF-8\" standalone=\"no\" ?>\n<!DOCTYPE ServiceExceptionReport SYSTEM \"http://schemas.opengis.net/wms/1.1.1/exception_1_1_1.dtd\">\n<ServiceExceptionReport version=\"1.1.1\">\n<ServiceException code=\"LayerNotDefined\">\nmsWMSFeatureInfo(): WMS server error. Layer(s) specified in QUERY_LAYERS parameter is not offered by the service instance.\n</ServiceException>\n</ServiceExceptionReport>\n"
+    }
+  ]
 }
