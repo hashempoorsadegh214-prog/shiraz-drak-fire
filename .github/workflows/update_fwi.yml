@@ -1,4 +1,4 @@
-name: Update FWI Fars
+name: Update FWI Derak
 
 on:
   workflow_dispatch:
@@ -24,42 +24,33 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install requests beautifulsoup4 geopandas shapely pandas pyproj xlsxwriter
+          python -m pip install requests beautifulsoup4 geopandas shapely pandas
 
-      - name: Get FWI forecast (Fars - High Resolution)
+      - name: Calculate High Resolution FWI for Mount Derak
         run: |
           set -e
           mkdir -p data
 
-          cat > request_fwi.py <<'PY'
+          cat > get_derak_fwi.py <<'PY'
           import json
           import math
           import requests
           import geopandas as gpd
-
           from bs4 import BeautifulSoup
           from shapely.geometry import Point
           from datetime import datetime, timedelta, timezone
 
           WMS_URL = "https://maps.effis.emergency.copernicus.eu/gwis"
-
           LAYER = "ecmwf.query"
           QUERY_LAYER = "ecmwf.query"
 
-          BBOX = [50.0, 27.0, 55.0, 32.0]
-          
-          # تفکیک مکانی بالا (حدود ۲ کیلومتر)
-          GRID_STEP = 0.02
-
-          POINT_WIDTH = 101
-          POINT_HEIGHT = 101
-          HALF_SIZE_METERS = 12000
-
-          OUTPUT_FILE = "data/fwi_fars.json"
+          GEOJSON_PATH = "Derak_Mountain.geojson"
+          OUTPUT_FILE = "data/derak_fwi.json"
 
           IRAN_TZ = timezone(timedelta(hours=3, minutes=30))
           now = datetime.now(IRAN_TZ)
 
+          # تاریخ پیش‌بینی: فردا
           target = now.date() + timedelta(days=1)
           target_date = target.strftime("%Y-%m-%d")
 
@@ -87,51 +78,44 @@ jobs:
                   jd = 1 + j_day_no % 31
               else:
                   jm = 7 + (j_day_no - 186) // 30
-                  jd = 1 + (j_day_no - 186) % 30
+                  jd = 1 + ((j_day_no - 186) % 30)
               return jy, jm, jd
 
           jy, jm, jd = gregorian_to_jalali(target.year, target.month, target.day)
-          shamsi_date = f"{jy:04d}-{jm:02d}-{jd:02d}"
+          shamsi_date = f"{jy:04d}/{jm:02d}/{jd:02d}"
+
+          now_jy, now_jm, now_jd = gregorian_to_jalali(now.year, now.month, now.day)
+          updated_at_fa = f"{now_jy:04d}/{now_jm:02d}/{now_jd:02d} - {now.strftime('%H:%M')}"
 
           def lonlat_to_3857(lon, lat):
               x = lon * 20037508.34 / 180.0
-              y = math.log(math.tan(math.radians(lat) / 2.0 + math.pi / 4.0))
-              y = y * 20037508.34 / math.pi
+              y = math.log(math.tan(math.radians(lat) / 2.0 + math.pi / 4.0)) * 20037508.34 / math.pi
               return x, y
 
           def parse_fwi(html):
               soup = BeautifulSoup(html, "html.parser")
-              rows = soup.find_all("tr")
-              values = []
-              for row in rows:
+              for row in soup.find_all("tr"):
                   cells = row.find_all("td")
                   if len(cells) < 2:
                       continue
                   label = cells[0].get_text(" ", strip=True).lower()
                   value_text = cells[1].get_text(" ", strip=True)
-                  if "fire weather index" not in label:
-                      continue
-                  try:
-                      value = float(value_text)
-                  except ValueError:
-                      continue
-                  if math.isfinite(value) and 0 <= value <= 200:
-                      values.append(value)
-              if not values:
-                  return None
-              return round(values[0], 3)
+                  if "fire weather index" in label:
+                      try:
+                          v = float(value_text)
+                          if math.isfinite(v) and 0 <= v <= 200:
+                              return round(v, 2)
+                      except ValueError:
+                          continue
+              return None
 
           session = requests.Session()
-          session.headers.update({"User-Agent": "FARS-FWI/1.0"})
+          session.headers.update({"User-Agent": "SHIRAZ-DRAK-FWI/1.0"})
 
-          def get_fwi(lon, lat):
+          def get_point_fwi(lon, lat):
               x, y = lonlat_to_3857(lon, lat)
-              minx = x - HALF_SIZE_METERS
-              maxx = x + HALF_SIZE_METERS
-              miny = y - HALF_SIZE_METERS
-              maxy = y + HALF_SIZE_METERS
-              bbox = f"{minx},{miny},{maxx},{maxy}"
-
+              half_size = 8000
+              bbox = f"{x - half_size},{y - half_size},{x + half_size},{y + half_size}"
               params = {
                   "SERVICE": "WMS",
                   "VERSION": "1.1.1",
@@ -141,8 +125,8 @@ jobs:
                   "STYLES": "",
                   "SRS": "EPSG:3857",
                   "BBOX": bbox,
-                  "WIDTH": str(POINT_WIDTH),
-                  "HEIGHT": str(POINT_HEIGHT),
+                  "WIDTH": "101",
+                  "HEIGHT": "101",
                   "X": "50",
                   "Y": "50",
                   "INFO_FORMAT": "text/html",
@@ -151,235 +135,107 @@ jobs:
                   "TRANSPARENT": "TRUE",
                   "TIME": target_date
               }
-
               try:
-                  response = session.get(WMS_URL, params=params, timeout=30)
-                  if response.status_code != 200:
-                      return None
-                  return parse_fwi(response.text)
+                  res = session.get(WMS_URL, params=params, timeout=20)
+                  if res.status_code == 200:
+                      return parse_fwi(res.text)
               except Exception:
-                  return None
+                  pass
+              return None
 
-          fars = gpd.read_file("fars.geojson")
-          if fars.crs is None:
-              fars = fars.set_crs("EPSG:4326")
-          else:
-              fars = fars.to_crs("EPSG:4326")
-
-          try:
-              geometry = fars.geometry.union_all()
-          except AttributeError:
-              geometry = fars.geometry.unary_union
-
-          points = []
-          lat = BBOX[1]
-          while lat <= BBOX[3] + 0.000001:
-              lon = BBOX[0]
-              while lon <= BBOX[2] + 0.000001:
-                  point = Point(lon, lat)
-                  if geometry.covers(point):
-                      points.append((round(lon, 5), round(lat, 5)))
-                  lon += GRID_STEP
-              lat += GRID_STEP
-
-          results = []
-          for (lon, lat) in points:
-              value = get_fwi(lon, lat)
-              if value is not None:
-                  results.append({"lat": lat, "lon": lon, "fwi": value})
-
-          if not results:
-              raise RuntimeError("No numeric FWI values were returned.")
-
-          values = [p["fwi"] for p in results]
-          minimum = min(values)
-          maximum = max(values)
-          mean = sum(values) / len(values)
-
-          def risk_class(value):
-              if value < 11.2: return "Low"
-              if value < 21.3: return "Moderate"
-              if value < 38: return "High"
-              if value < 50: return "Very High"
-              if value <= 70: return "Extreme"
-              return "Very Extreme"
-
-          for point in results:
-              point["risk_class"] = risk_class(point["fwi"])
-
-          output = {
-              "forecast_gregorian": target_date,
-              "forecast_shamsi": shamsi_date,
-              "generated_at_iran": now.strftime("%Y-%m-%d %H:%M"),
-              "source": "Copernicus EFFIS / ECMWF",
-              "layer": "ecmwf.query",
-              "display_layer": "ecmwf.fwi",
-              "query_layer": "ecmwf.query",
-              "crs": "EPSG:3857",
-              "region": "Fars Province, Iran",
-              "bbox": BBOX,
-              "grid_step": GRID_STEP,
-              "statistics": {
-                  "min": round(minimum, 3),
-                  "max": round(maximum, 3),
-                  "mean": round(mean, 3),
-                  "count": len(results)
-              },
-              "points": results
-          }
-
-          with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-              json.dump(output, f, ensure_ascii=False, indent=2)
-
-          print("FWI FARS JSON READY:", OUTPUT_FILE, "points:", len(results))
-          PY
-
-          python request_fwi.py
-
-      - name: Derive Derak from Fars points (generate data/derak_fwi.json)
-        run: |
-          set -e
-          cat > derive_derak_from_fars.py <<'PY'
-          import json
-          import geopandas as gpd
-          from shapely.geometry import Point
-          from datetime import datetime, timedelta, timezone
-
-          FARS_JSON = "data/fwi_fars.json"
-          DERAK_GEOJSON = "Derak_Mountain.geojson"
-          OUTPUT_FILE = "data/derak_fwi.json"
-
-          IRAN_TZ = timezone(timedelta(hours=3, minutes=30))
-          now = datetime.now(IRAN_TZ)
-
-          def gregorian_to_jalali(gy, gm, gd):
-              g_days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-              if gy % 4 == 0 and (gy % 100 != 0 or gy % 400 == 0):
-                  g_days[1] = 29
-              gy2 = gy - 1600
-              gm2 = gm - 1
-              gd2 = gd - 1
-              g_day_no = 365 * gy2 + (gy2 + 3) // 4 - (gy2 + 99) // 100 + (gy2 + 399) // 400
-              for i in range(gm2):
-                  g_day_no += g_days[i]
-              g_day_no += gd2
-              j_day_no = g_day_no - 79
-              j_np = j_day_no // 12053
-              j_day_no %= 12053
-              jy = 979 + 33 * j_np + 4 * (j_day_no // 1461)
-              j_day_no %= 1461
-              if j_day_no >= 366:
-                  jy += (j_day_no - 1) // 365
-                  j_day_no = (j_day_no - 1) % 365
-              if j_day_no < 186:
-                  jm = 1 + j_day_no // 31
-                  jd = 1 + (j_day_no % 31)
+          def get_risk_info(fwi_val):
+              if fwi_val < 11.2:
+                  return "کم", "Low", "#22c55e"
+              elif fwi_val < 21.3:
+                  return "متوسط", "Moderate", "#eab308"
+              elif fwi_val < 38.0:
+                  return "زیاد", "High", "#f97316"
+              elif fwi_val < 50.0:
+                  return "خیلی زیاد", "Very High", "#ef4444"
               else:
-                  jm = 7 + (j_day_no - 186) // 30
-                  jd = 1 + ((j_day_no - 186) % 30)
-              return jy, jm, jd
+                  return "بحرانی", "Extreme", "#9333ea"
 
-          def risk_class(value):
-              if value < 11.2: return "کم", "Low", "#22c55e"
-              if value < 21.3: return "متوسط", "Moderate", "#eab308"
-              if value < 38.0: return "زیاد", "High", "#f97316"
-              if value < 50.0: return "خیلی زیاد", "Very High", "#ef4444"
-              return "بحرانی", "Extreme", "#9333ea"
-
-          with open(FARS_JSON, encoding="utf-8") as f:
-              fars = json.load(f)
-
-          derak = gpd.read_file(DERAK_GEOJSON)
-          if derak.crs is None:
-              derak = derak.set_crs("EPSG:4326")
+          print(f"Loading {GEOJSON_PATH} ...")
+          gdf = gpd.read_file(GEOJSON_PATH)
+          if gdf.crs is None:
+              gdf = gdf.set_crs("EPSG:4326")
           else:
-              derak = derak.to_crs("EPSG:4326")
+              gdf = gdf.to_crs("EPSG:4326")
 
           try:
-              geom = derak.geometry.union_all()
+              geom = gdf.geometry.union_all()
           except Exception:
-              geom = derak.geometry.unary_union
+              geom = gdf.geometry.unary_union
 
-          points = fars.get("points", [])
-          inside = []
-          for p in points:
-              lon = float(p["lon"])
-              lat = float(p["lat"])
-              fwi = p.get("fwi", None)
-              if fwi is None:
-                  continue
-              pt = Point(lon, lat)
-              if geom.covers(pt) or geom.contains(pt):
-                  inside.append({"lon": lon, "lat": lat, "fwi": float(fwi)})
+          # ایجاد شبکه با تفکیک مکانی ریز در محدوده کوهستان دراک
+          minx, miny, maxx, maxy = geom.bounds
+          GRID_STEP = 0.008  # تفکیک دقیق حدود ۸۰۰ متر روی کوهستان دراک
 
-          if not inside:
+          grid_points = []
+          curr_y = miny
+          while curr_y <= maxy:
+              curr_x = minx
+              while curr_x <= maxx:
+                  p = Point(curr_x, curr_y)
+                  if geom.covers(p) or geom.contains(p):
+                      grid_points.append((round(curr_x, 5), round(curr_y, 5)))
+                  curr_x += GRID_STEP
+              curr_y += GRID_STEP
+
+          # در صورتی که نقاط کم بود، نقاط کمکی اضافه شوند
+          if len(grid_points) == 0:
               c = geom.representative_point()
-              cx, cy = float(c.x), float(c.y)
+              grid_points.append((round(c.x, 5), round(c.y, 5)))
 
-              def dist2(p):
-                  dx = float(p["lon"]) - cx
-                  dy = float(p["lat"]) - cy
-                  return dx*dx + dy*dy
+          print(f"Sampling {len(grid_points)} high-resolution points inside Mount Derak boundary...")
 
-              valid = [{"lon": float(p["lon"]), "lat": float(p["lat"]), "fwi": float(p["fwi"])}
-                       for p in points if p.get("fwi") is not None]
+          collected_fwi = []
+          for idx, (lon, lat) in enumerate(grid_points, start=1):
+              fwi_val = get_point_fwi(lon, lat)
+              if fwi_val is not None:
+                  collected_fwi.append(fwi_val)
+                  print(f"[{idx}/{len(grid_points)}] ({lat}, {lon}) -> FWI: {fwi_val}")
+              else:
+                  print(f"[{idx}/{len(grid_points)}] ({lat}, {lon}) -> No Data")
 
-              valid.sort(key=dist2)
-              inside = valid[:6]
-              method = "nearest_points_fallback"
+          if collected_fwi:
+              mean_fwi = round(sum(collected_fwi) / len(collected_fwi), 2)
+              risk_fa, risk_en, risk_color = get_risk_info(mean_fwi)
           else:
-              method = "polygon_filter"
+              mean_fwi = None
+              risk_fa, risk_en, risk_color = "نامشخص", "No Data", "#94a3b8"
 
-          values = [p["fwi"] for p in inside]
-          mean_val = sum(values) / len(values)
-          fa_risk, en_risk, color = risk_class(mean_val)
-
-          forecast_g = fars.get("forecast_gregorian")
-          forecast_s = fars.get("forecast_shamsi")
-
-          jy, jm, jd = gregorian_to_jalali(now.year, now.month, now.day)
-          shamsi_now = f"{jy:04d}/{jm:02d}/{jd:02d}"
-          updated_at_fa = f"{shamsi_now} - {now.strftime('%H:%M')}"
-
-          out = {
+          result = {
               "area_id": "derak-mountain",
               "area_name": "کوهستان دراک",
-              "forecast_gregorian": forecast_g,
-              "forecast_shamsi": forecast_s,
+              "forecast_gregorian": target_date,
+              "forecast_shamsi": shamsi_date,
               "updated_at": updated_at_fa,
-              "fwi": round(mean_val, 2),
-              "risk_level_fa": fa_risk,
-              "risk_level_en": en_risk,
-              "risk_color": color,
-              "points_count": len(inside),
-              "last_epoch": int(now.timestamp()),
-              "derivation_method": method
+              "fwi": mean_fwi,
+              "risk_level_fa": risk_fa,
+              "risk_level_en": risk_en,
+              "risk_color": risk_color,
+              "points_count": len(collected_fwi),
+              "last_epoch": int(now.timestamp())
           }
 
           with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-              json.dump(out, f, ensure_ascii=False, indent=2)
+              json.dump(result, f, ensure_ascii=False, indent=2)
 
-          print("DERAK derived from FARS points:", OUTPUT_FILE, "points:", len(inside), "mean:", out["fwi"])
+          print("Generated Derak JSON successfully:")
+          print(json.dumps(result, ensure_ascii=False, indent=2))
           PY
 
-          python derive_derak_from_fars.py
+          python get_derak_fwi.py
 
-      - name: Create geographic Excel report
-        run: |
-          python report_fwi.py
-
-      - name: Save FWI and Excel report
+      - name: Commit and Push Results
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add data/fwi_fars.json
           git add data/derak_fwi.json
-          git add data/FARS_FWI_GeoReport.xlsx
-
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "Update FWI forecast (Fars high-res) + Derak derived"
+            git commit -m "Update high-resolution FWI for Mount Derak"
             git push
           fi
