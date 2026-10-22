@@ -3,10 +3,11 @@
   "area_name": "کوهستان دراک",
   "forecast_gregorian": "2026-10-22",
   "forecast_shamsi": "1405/07/30",
-  "updated_at": "1405/07/30 - 03:03",
+  "updated_at": "1405/07/30 - 15:07",
   "fwi": 0.0,
   "risk_level_fa": "کم",
   "risk_level_en": "Low",
   "risk_color": "#22c55e",
-  "points_count": 1
+  "points_count": 1,
+  "last_epoch": 1792669048
 }
