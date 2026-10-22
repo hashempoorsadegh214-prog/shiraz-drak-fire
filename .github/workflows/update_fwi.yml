@@ -24,9 +24,9 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install requests beautifulsoup4 geopandas shapely pandas
+          python -m pip install requests beautifulsoup4 geopandas shapely pyproj
 
-      - name: Calculate High Resolution FWI for Mount Derak
+      - name: Fetch and compute FWI for Mount Derak (high-resolution)
         run: |
           set -e
           mkdir -p data
@@ -40,82 +40,131 @@ jobs:
           from shapely.geometry import Point
           from datetime import datetime, timedelta, timezone
 
+          # -------- Settings --------
           WMS_URL = "https://maps.effis.emergency.copernicus.eu/gwis"
           LAYER = "ecmwf.query"
           QUERY_LAYER = "ecmwf.query"
 
-          GEOJSON_PATH = "Derak_Mountain.geojson"
-          OUTPUT_FILE = "data/derak_fwi.json"
+          DERAK_GEOJSON = "Derak_Mountain.geojson"
+          OUTPUT_JSON = "data/derak_fwi.json"
+
+          # تفکیک مکانی (درجه). 0.008 ~ حدود ۸۰۰ متر
+          GRID_STEP = 0.008
+
+          # جعبه پرس‌وجوی GetFeatureInfo (متر) در EPSG:3857
+          HALF_SIZE_METERS = 8000
+
+          WIDTH = 101
+          HEIGHT = 101
+          XPIX = 50
+          YPIX = 50
 
           IRAN_TZ = timezone(timedelta(hours=3, minutes=30))
           now = datetime.now(IRAN_TZ)
 
-          # تاریخ پیش‌بینی: فردا
-          target = now.date() + timedelta(days=1)
-          target_date = target.strftime("%Y-%m-%d")
-
+          # -------- Jalali conversion (FIXED) --------
           def gregorian_to_jalali(gy, gm, gd):
-              g_days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-              if gy % 4 == 0 and (gy % 100 != 0 or gy % 400 == 0):
-                  g_days[1] = 29
-              gy2 = gy - 1600
-              gm2 = gm - 1
-              gd2 = gd - 1
-              g_day_no = 365 * gy2 + (gy2 + 3) // 4 - (gy2 + 99) // 100 + (gy2 + 399) // 400
-              for i in range(gm2):
-                  g_day_no += g_days[i]
-              g_day_no += gd2
+              g_days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+
+              # leap year adjust for February
+              leap = (gy % 4 == 0 and (gy % 100 != 0 or gy % 400 == 0))
+              if leap:
+                  g_days_in_month[1] = 29
+
+              gy -= 1600
+              gm -= 1
+              gd -= 1
+
+              g_day_no = (
+                  365 * gy
+                  + (gy + 3) // 4
+                  - (gy + 99) // 100
+                  + (gy + 399) // 400
+              )
+
+              for i in range(gm):
+                  g_day_no += g_days_in_month[i]
+
+              g_day_no += gd
               j_day_no = g_day_no - 79
+
               j_np = j_day_no // 12053
               j_day_no %= 12053
+
               jy = 979 + 33 * j_np + 4 * (j_day_no // 1461)
               j_day_no %= 1461
+
               if j_day_no >= 366:
                   jy += (j_day_no - 1) // 365
                   j_day_no = (j_day_no - 1) % 365
+
               if j_day_no < 186:
                   jm = 1 + j_day_no // 31
                   jd = 1 + j_day_no % 31
               else:
                   jm = 7 + (j_day_no - 186) // 30
-                  jd = 1 + ((j_day_no - 186) % 30)
+                  jd = 1 + (j_day_no - 186) % 30
+
               return jy, jm, jd
 
-          jy, jm, jd = gregorian_to_jalali(target.year, target.month, target.day)
-          shamsi_date = f"{jy:04d}/{jm:02d}/{jd:02d}"
+          def to_fa_date_slash(dt):
+              jy, jm, jd = gregorian_to_jalali(dt.year, dt.month, dt.day)
+              return f"{jy:04d}/{jm:02d}/{jd:02d}"
 
-          now_jy, now_jm, now_jd = gregorian_to_jalali(now.year, now.month, now.day)
-          updated_at_fa = f"{now_jy:04d}/{now_jm:02d}/{now_jd:02d} - {now.strftime('%H:%M')}"
+          # forecast date: tomorrow
+          forecast_dt = (now + timedelta(days=1)).date()
+          forecast_gregorian = forecast_dt.strftime("%Y-%m-%d")
+          jy, jm, jd = gregorian_to_jalali(forecast_dt.year, forecast_dt.month, forecast_dt.day)
+          forecast_shamsi = f"{jy:04d}/{jm:02d}/{jd:02d}"
 
+          updated_at = f"{to_fa_date_slash(now)} - {now.strftime('%H:%M')}"
+
+          # -------- WebMercator --------
           def lonlat_to_3857(lon, lat):
               x = lon * 20037508.34 / 180.0
               y = math.log(math.tan(math.radians(lat) / 2.0 + math.pi / 4.0)) * 20037508.34 / math.pi
               return x, y
 
+          # -------- Parse FWI from HTML --------
           def parse_fwi(html):
               soup = BeautifulSoup(html, "html.parser")
-              for row in soup.find_all("tr"):
+              rows = soup.find_all("tr")
+              for row in rows:
                   cells = row.find_all("td")
                   if len(cells) < 2:
                       continue
                   label = cells[0].get_text(" ", strip=True).lower()
                   value_text = cells[1].get_text(" ", strip=True)
+
                   if "fire weather index" in label:
                       try:
                           v = float(value_text)
                           if math.isfinite(v) and 0 <= v <= 200:
                               return round(v, 2)
                       except ValueError:
-                          continue
+                          return None
               return None
 
-          session = requests.Session()
-          session.headers.update({"User-Agent": "SHIRAZ-DRAK-FWI/1.0"})
+          # -------- Risk mapping (dashboard sync) --------
+          def risk_from_fwi(v):
+              # همان باندهایی که قبلاً برای عقربه/رنگ استفاده کرده بودیم
+              if v < 11.2:
+                  return "کم", "Low", "#22c55e"
+              if v < 21.3:
+                  return "متوسط", "Moderate", "#eab308"
+              if v < 38.0:
+                  return "زیاد", "High", "#f97316"
+              if v < 50.0:
+                  return "خیلی زیاد", "Very High", "#ef4444"
+              return "بحرانی", "Extreme", "#9333ea"
 
-          def get_point_fwi(lon, lat):
+          session = requests.Session()
+          session.headers.update({"User-Agent": "SHIRAZ-DERAK-FWI/2.0"})
+
+          def get_fwi_at(lon, lat, time_str):
               x, y = lonlat_to_3857(lon, lat)
-              half_size = 8000
-              bbox = f"{x - half_size},{y - half_size},{x + half_size},{y + half_size}"
+              bbox = f"{x - HALF_SIZE_METERS},{y - HALF_SIZE_METERS},{x + HALF_SIZE_METERS},{y + HALF_SIZE_METERS}"
+
               params = {
                   "SERVICE": "WMS",
                   "VERSION": "1.1.1",
@@ -125,38 +174,27 @@ jobs:
                   "STYLES": "",
                   "SRS": "EPSG:3857",
                   "BBOX": bbox,
-                  "WIDTH": "101",
-                  "HEIGHT": "101",
-                  "X": "50",
-                  "Y": "50",
+                  "WIDTH": str(WIDTH),
+                  "HEIGHT": str(HEIGHT),
+                  "X": str(XPIX),
+                  "Y": str(YPIX),
                   "INFO_FORMAT": "text/html",
                   "FEATURE_COUNT": "1",
                   "FORMAT": "image/png",
                   "TRANSPARENT": "TRUE",
-                  "TIME": target_date
+                  "TIME": time_str,
               }
+
               try:
-                  res = session.get(WMS_URL, params=params, timeout=20)
-                  if res.status_code == 200:
-                      return parse_fwi(res.text)
-              except Exception:
-                  pass
-              return None
+                  r = session.get(WMS_URL, params=params, timeout=25)
+                  if r.status_code != 200:
+                      return None, f"HTTP {r.status_code}"
+                  return parse_fwi(r.text), None
+              except Exception as e:
+                  return None, str(e)
 
-          def get_risk_info(fwi_val):
-              if fwi_val < 11.2:
-                  return "کم", "Low", "#22c55e"
-              elif fwi_val < 21.3:
-                  return "متوسط", "Moderate", "#eab308"
-              elif fwi_val < 38.0:
-                  return "زیاد", "High", "#f97316"
-              elif fwi_val < 50.0:
-                  return "خیلی زیاد", "Very High", "#ef4444"
-              else:
-                  return "بحرانی", "Extreme", "#9333ea"
-
-          print(f"Loading {GEOJSON_PATH} ...")
-          gdf = gpd.read_file(GEOJSON_PATH)
+          # -------- Load Derak polygon --------
+          gdf = gpd.read_file(DERAK_GEOJSON)
           if gdf.crs is None:
               gdf = gdf.set_crs("EPSG:4326")
           else:
@@ -167,75 +205,108 @@ jobs:
           except Exception:
               geom = gdf.geometry.unary_union
 
-          # ایجاد شبکه با تفکیک مکانی ریز در محدوده کوهستان دراک
           minx, miny, maxx, maxy = geom.bounds
-          GRID_STEP = 0.008  # تفکیک دقیق حدود ۸۰۰ متر روی کوهستان دراک
 
-          grid_points = []
-          curr_y = miny
-          while curr_y <= maxy:
-              curr_x = minx
-              while curr_x <= maxx:
-                  p = Point(curr_x, curr_y)
+          # Generate grid points inside polygon
+          grid = []
+          y = miny
+          while y <= maxy + 1e-12:
+              x = minx
+              while x <= maxx + 1e-12:
+                  p = Point(x, y)
                   if geom.covers(p) or geom.contains(p):
-                      grid_points.append((round(curr_x, 5), round(curr_y, 5)))
-                  curr_x += GRID_STEP
-              curr_y += GRID_STEP
+                      grid.append((round(x, 6), round(y, 6)))
+                  x += GRID_STEP
+              y += GRID_STEP
 
-          # در صورتی که نقاط کم بود، نقاط کمکی اضافه شوند
-          if len(grid_points) == 0:
-              c = geom.representative_point()
-              grid_points.append((round(c.x, 5), round(c.y, 5)))
+          if not grid:
+              rp = geom.representative_point()
+              grid = [(round(rp.x, 6), round(rp.y, 6))]
 
-          print(f"Sampling {len(grid_points)} high-resolution points inside Mount Derak boundary...")
+          # Multi-date fallback: today, tomorrow, day+2 (sometimes TIME not published yet)
+          target_dates = []
+          for d in [0, 1, 2]:
+              target_dates.append((now.date() + timedelta(days=d)).strftime("%Y-%m-%d"))
 
-          collected_fwi = []
-          for idx, (lon, lat) in enumerate(grid_points, start=1):
-              fwi_val = get_point_fwi(lon, lat)
-              if fwi_val is not None:
-                  collected_fwi.append(fwi_val)
-                  print(f"[{idx}/{len(grid_points)}] ({lat}, {lon}) -> FWI: {fwi_val}")
-              else:
-                  print(f"[{idx}/{len(grid_points)}] ({lat}, {lon}) -> No Data")
+          best_date = None
+          collected = []
+          debug_samples = []
 
-          if collected_fwi:
-              mean_fwi = round(sum(collected_fwi) / len(collected_fwi), 2)
-              risk_fa, risk_en, risk_color = get_risk_info(mean_fwi)
+          # Try dates until we get some numeric FWI
+          for t in target_dates:
+              collected = []
+              debug_samples = []
+              for i, (lon, lat) in enumerate(grid, start=1):
+                  v, err = get_fwi_at(lon, lat, t)
+                  if i <= 8:  # only a few samples for debug (keeps JSON light)
+                      debug_samples.append({"time": t, "lon": lon, "lat": lat, "fwi": v, "err": err})
+                  if v is not None:
+                      collected.append(v)
+
+              if collected:
+                  best_date = t
+                  break
+
+          if best_date is None:
+              out = {
+                  "area_id": "derak-mountain",
+                  "area_name": "کوهستان دراک",
+                  "forecast_gregorian": forecast_gregorian,
+                  "forecast_shamsi": forecast_shamsi,
+                  "updated_at": updated_at,
+                  "fwi": None,
+                  "risk_level_fa": "نامشخص",
+                  "risk_level_en": "No Data",
+                  "risk_color": "#94a3b8",
+                  "points_count": 0,
+                  "last_epoch": int(now.timestamp()),
+                  "error": "No valid GetFeatureInfo results (possibly TIME not available yet or WMS response format changed).",
+                  "debug_samples": debug_samples
+              }
           else:
-              mean_fwi = None
-              risk_fa, risk_en, risk_color = "نامشخص", "No Data", "#94a3b8"
+              mean_fwi = round(sum(collected) / len(collected), 2)
+              risk_fa, risk_en, color = risk_from_fwi(mean_fwi)
 
-          result = {
-              "area_id": "derak-mountain",
-              "area_name": "کوهستان دراک",
-              "forecast_gregorian": target_date,
-              "forecast_shamsi": shamsi_date,
-              "updated_at": updated_at_fa,
-              "fwi": mean_fwi,
-              "risk_level_fa": risk_fa,
-              "risk_level_en": risk_en,
-              "risk_color": risk_color,
-              "points_count": len(collected_fwi),
-              "last_epoch": int(now.timestamp())
-          }
+              # If best_date differs from tomorrow, adjust displayed forecast dates to match best_date
+              bd = datetime.strptime(best_date, "%Y-%m-%d").date()
+              jy2, jm2, jd2 = gregorian_to_jalali(bd.year, bd.month, bd.day)
+              best_shamsi = f"{jy2:04d}/{jm2:02d}/{jd2:02d}"
 
-          with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-              json.dump(result, f, ensure_ascii=False, indent=2)
+              out = {
+                  "area_id": "derak-mountain",
+                  "area_name": "کوهستان دراک",
+                  "forecast_gregorian": best_date,
+                  "forecast_shamsi": best_shamsi,
+                  "updated_at": updated_at,
+                  "fwi": mean_fwi,
+                  "risk_level_fa": risk_fa,
+                  "risk_level_en": risk_en,
+                  "risk_color": color,
+                  "points_count": len(collected),
+                  "last_epoch": int(now.timestamp()),
+                  "grid_step": GRID_STEP,
+                  "debug_samples": debug_samples
+              }
 
-          print("Generated Derak JSON successfully:")
-          print(json.dumps(result, ensure_ascii=False, indent=2))
+          with open(OUTPUT_JSON, "w", encoding="utf-8") as f:
+              json.dump(out, f, ensure_ascii=False, indent=2)
+
+          print("OK ->", OUTPUT_JSON)
+          print(json.dumps(out, ensure_ascii=False, indent=2))
           PY
 
           python get_derak_fwi.py
 
-      - name: Commit and Push Results
+      - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
           git add data/derak_fwi.json
+
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "Update high-resolution FWI for Mount Derak"
+            git commit -m "Update Derak FWI (high-res)"
             git push
           fi
