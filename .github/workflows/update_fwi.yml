@@ -40,20 +40,22 @@ jobs:
           from bs4 import BeautifulSoup
           from shapely.geometry import Point
           from datetime import datetime, timedelta, timezone
+          import re
 
           WMS_URL = "https://maps.effis.emergency.copernicus.eu/gwis"
-          LAYER = "ecmwf.fwi"
-          QUERY_LAYER = "ecmwf.query"
-
-          # Sampling: keep it moderate to avoid rate limits
-          GRID_STEP = 0.01  # degrees
+          LAYER = "ecmwf.fwi"   # لایه درست
+          GRID_STEP = 0.01      # degrees
           OUTPUT_FILE = "data/derak_fwi.json"
 
-          # تنظیم زمان ایران با حاشیه امن
+          # تنظیم زمان ایران
           IRAN_TZ = timezone(timedelta(hours=3, minutes=30))
           now = datetime.now(IRAN_TZ)
-          target = now
-          target_date = target.strftime("%Y-%m-%d")
+
+          # تاریخ‌های هدف: امروز + اگر نبود دیروز
+          target_dates = [
+              now.strftime("%Y-%m-%d"),
+              (now - timedelta(days=1)).strftime("%Y-%m-%d")
+          ]
 
           def gregorian_to_jalali(gy, gm, gd):
               g_days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
@@ -62,23 +64,18 @@ jobs:
               gy2 = gy - 1600
               gm2 = gm - 1
               gd2 = gd - 1
-
               g_day_no = 365 * gy2 + (gy2 + 3) // 4 - (gy2 + 99) // 100 + (gy2 + 399) // 400
               for i in range(gm2):
                   g_day_no += g_days[i]
               g_day_no += gd2
-
               j_day_no = g_day_no - 79
               j_np = j_day_no // 12053
               j_day_no %= 12053
-
               jy = 979 + 33 * j_np + 4 * (j_day_no // 1461)
               j_day_no %= 1461
-
               if j_day_no >= 366:
                   jy += (j_day_no - 1) // 365
                   j_day_no = (j_day_no - 1) % 365
-
               if j_day_no < 186:
                   jm = 1 + j_day_no // 31
                   jd = 1 + (j_day_no % 31)
@@ -87,7 +84,7 @@ jobs:
                   jd = 1 + ((j_day_no - 186) % 30)
               return jy, jm, jd
 
-          jy, jm, jd = gregorian_to_jalali(target.year, target.month, target.day)
+          jy, jm, jd = gregorian_to_jalali(now.year, now.month, now.day)
           shamsi_date = f"{jy:04d}/{jm:02d}/{jd:02d}"
           time_str = now.strftime("%H:%M")
           updated_at_fa = f"{shamsi_date} - {time_str}"
@@ -99,6 +96,8 @@ jobs:
 
           def parse_fwi(html):
               soup = BeautifulSoup(html, "html.parser")
+
+              # تلاش ۱: جدول
               for row in soup.find_all("tr"):
                   cells = row.find_all("td")
                   if len(cells) < 2:
@@ -110,8 +109,10 @@ jobs:
                           return float(valtxt)
                       except Exception:
                           return None
-              import re
-              m = re.search(r"([0-9]+(\.[0-9]+)?)", soup.get_text(" ", strip=True))
+
+              # تلاش ۲: اولین عدد
+              txt = soup.get_text(" ", strip=True)
+              m = re.search(r"([0-9]+(\.[0-9]+)?)", txt)
               if m:
                   try:
                       return float(m.group(1))
@@ -120,9 +121,9 @@ jobs:
               return None
 
           session = requests.Session()
-          session.headers.update({"User-Agent": "DERAK-FWI/1.0"})
+          session.headers.update({"User-Agent": "DERAK-FWI/1.1"})
 
-          def get_fwi(lon, lat):
+          def get_fwi_for_time(lon, lat, time_iso):
               x, y = lonlat_to_3857(lon, lat)
               half = 5000
               minx, maxx = x - half, x + half
@@ -134,7 +135,7 @@ jobs:
                   "VERSION": "1.1.1",
                   "REQUEST": "GetFeatureInfo",
                   "LAYERS": LAYER,
-                  "QUERY_LAYERS": QUERY_LAYER,
+                  "QUERY_LAYERS": LAYER,   # ✅ اصلاح کلیدی: باید همان LAYER باشد
                   "STYLES": "",
                   "SRS": "EPSG:3857",
                   "BBOX": bbox,
@@ -146,12 +147,21 @@ jobs:
                   "FEATURE_COUNT": "1",
                   "FORMAT": "image/png",
                   "TRANSPARENT": "TRUE",
-                  "TIME": target_date,
+                  "TIME": time_iso,
               }
+
               r = session.get(WMS_URL, params=params, timeout=40)
               if r.status_code != 200:
-                  return None
-              return parse_fwi(r.text)
+                  return None, r.status_code, None
+              v = parse_fwi(r.text)
+              return v, r.status_code, r.text[:2000]  # بخشی از پاسخ برای دیباگ
+
+          def risk_class(value):
+              if value < 11.2: return "کم", "Low", "#22c55e"
+              if value < 21.3: return "متوسط", "Moderate", "#eab308"
+              if value < 38.0: return "زیاد", "High", "#f97316"
+              if value < 50.0: return "خیلی زیاد", "Very High", "#ef4444"
+              return "بحرانی", "Extreme", "#9333ea"
 
           print("Loading Derak_Mountain.geojson...")
           derak = gpd.read_file("Derak_Mountain.geojson")
@@ -166,6 +176,7 @@ jobs:
 
           minx, miny, maxx, maxy = geom.bounds
 
+          # نمونه‌برداری داخل پلیگون
           points = []
           lat = miny
           while lat <= maxy + 1e-9:
@@ -177,37 +188,72 @@ jobs:
                   lon += GRID_STEP
               lat += GRID_STEP
 
-          if not points:
-              points = [(52.43, 29.68)]
+          # اگر خیلی کم بود، یک بافر خیلی کوچک برای گرفتن چند نقطه اطراف
+          if len(points) < 3:
+              # افزایش محدوده نمونه‌برداری اطراف bounds به اندازه 0.02 درجه
+              pad = 0.02
+              minx2, miny2, maxx2, maxy2 = minx - pad, miny - pad, maxx + pad, maxy + pad
+              lat = miny2
+              while lat <= maxy2 + 1e-9:
+                  lon = minx2
+                  while lon <= maxx2 + 1e-9:
+                      points.append((round(lon, 5), round(lat, 5)))
+                      lon += GRID_STEP
+                  lat += GRID_STEP
 
-          values = []
+          # حذف تکراری‌ها
+          points = list(dict.fromkeys(points))
+
           results = []
+          values = []
+          used_time = None
+          debug_samples = []
+
+          # تلاش برای هر نقطه با TIME های مختلف (امروز/دیروز)
           for lon, lat in points:
-              v = get_fwi(lon, lat)
-              if v is None:
+              got = False
+              for t in target_dates:
+                  v, code, sample = get_fwi_for_time(lon, lat, t)
+                  if len(debug_samples) < 3 and sample is not None:
+                      debug_samples.append({"time": t, "status": code, "sample": sample})
+                  if v is not None:
+                      results.append({"lon": lon, "lat": lat, "fwi": v, "time": t})
+                      values.append(v)
+                      used_time = t
+                      got = True
+                      break
+              if got:
                   continue
-              values.append(v)
-              results.append({"lon": lon, "lat": lat, "fwi": v})
 
           if not values:
-              values = [0.0]
-              results = [{"lon": 52.43, "lat": 29.68, "fwi": 0.0}]
+              out = {
+                  "area_id": "derak-mountain",
+                  "area_name": "کوهستان دراک",
+                  "forecast_gregorian": target_dates[0],
+                  "forecast_shamsi": shamsi_date,
+                  "updated_at": updated_at_fa,
+                  "fwi": None,
+                  "risk_level_fa": "نامشخص",
+                  "risk_level_en": "No Data",
+                  "risk_color": "#94a3b8",
+                  "points_count": 0,
+                  "last_epoch": int(now.timestamp()),
+                  "error": "No valid GetFeatureInfo results (possibly TIME not available yet or WMS response format changed).",
+                  "debug_samples": debug_samples
+              }
+              with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+                  json.dump(out, f, ensure_ascii=False, indent=2)
+
+              print("NO DATA; JSON SAVED.")
+              raise SystemExit(0)
 
           mean_val = sum(values) / len(values)
-
-          def risk_class(value):
-              if value < 11.2: return "کم", "Low", "#22c55e"
-              if value < 21.3: return "متوسط", "Moderate", "#eab308"
-              if value < 38.0: return "زیاد", "High", "#f97316"
-              if value < 50.0: return "خیلی زیاد", "Very High", "#ef4444"
-              return "بحرانی", "Extreme", "#9333ea"
-
           fa_risk, en_risk, color = risk_class(mean_val)
 
           out = {
               "area_id": "derak-mountain",
               "area_name": "کوهستان دراک",
-              "forecast_gregorian": target_date,
+              "forecast_gregorian": used_time or target_dates[0],
               "forecast_shamsi": shamsi_date,
               "updated_at": updated_at_fa,
               "fwi": round(mean_val, 2),
@@ -222,6 +268,7 @@ jobs:
               json.dump(out, f, ensure_ascii=False, indent=2)
 
           print("DERAK FWI JSON SAVED SUCCESSFULLY!")
+          print(f"Used TIME: {used_time} | points used: {len(results)} | mean fwi: {mean_val}")
           PY
 
           python request_fwi.py
