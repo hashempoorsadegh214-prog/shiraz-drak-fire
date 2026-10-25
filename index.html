@@ -2,952 +2,856 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta name="theme-color" content="#F8FAFC">
-    <meta name="description"
-          content="سامانه پایش و هشدار خطر حریق کوهستان دراک شیراز بر اساس شاخص FWI">
+  <title>سامانه هوشمند هشدار خطر حریق | کوهستان دراک</title>
+  <meta name="description" content="نمایش سطح خطر حریق در کوهستان دراک شیراز بر اساس داده‌های هواشناسی.">
 
-    <title>سامانه هوشمند هشدار خطر حریق | کوهستان دراک</title>
+  <meta name="theme-color" content="#101820">
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap"
-          rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101820;
+      --panel: #18232d;
+      --panel-light: #202e39;
+      --text: #f4f7fa;
+      --muted: #aab8c4;
+      --border: rgba(255, 255, 255, 0.09);
+      --green: #22c55e;
+      --yellow: #eab308;
+      --orange: #f97316;
+      --red: #ef4444;
+      --purple: #9333ea;
+    }
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    * {
+      box-sizing: border-box;
+    }
 
-    <style>
-        * {
-            box-sizing: border-box;
-        }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(
+          circle at top right,
+          rgba(239, 68, 68, 0.13),
+          transparent 35%
+        ),
+        var(--bg);
+      color: var(--text);
+      font-family: Tahoma, Arial, sans-serif;
+      line-height: 1.8;
+    }
 
-        body {
-            font-family: 'Vazirmatn', sans-serif;
-            -webkit-tap-highlight-color: transparent;
-        }
+    .container {
+      width: min(100% - 28px, 520px);
+      margin: 0 auto;
+      padding: 18px 0 30px;
+    }
 
-        button,
-        a,
-        summary {
-            touch-action: manipulation;
-        }
+    .header {
+      padding: 22px 18px;
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      background: linear-gradient(135deg, #263541, #18232d);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+      text-align: center;
+    }
 
-        button:focus-visible,
-        a:focus-visible,
-        summary:focus-visible {
-            outline: 3px solid #0EA5E9;
-            outline-offset: 3px;
-        }
+    .header-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 58px;
+      height: 58px;
+      margin-bottom: 8px;
+      border-radius: 18px;
+      background: rgba(239, 68, 68, 0.14);
+      font-size: 30px;
+    }
 
-        .gauge-circle {
-            transform: rotate(-90deg);
-            transform-origin: 50% 50%;
-            transition:
-                stroke-dashoffset 0.9s ease,
-                opacity 0.3s ease;
-        }
+    h1 {
+      margin: 0;
+      font-size: clamp(21px, 5vw, 27px);
+      font-weight: 800;
+    }
 
-        .btn-refresh:active svg {
-            animation: spin-once 0.45s ease-in-out;
-        }
+    .subtitle {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
 
-        @keyframes spin-once {
-            to {
-                transform: rotate(360deg);
-            }
-        }
+    .status-card {
+      margin-top: 16px;
+      padding: 20px 16px;
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      background: var(--panel);
+      text-align: center;
+    }
 
-        .glass-card {
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-        }
+    .section-title {
+      margin: 0 0 8px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 500;
+    }
 
-        #gps-status:empty {
-            display: none;
-        }
+    .gauge {
+      width: 100%;
+      max-width: 310px;
+      display: block;
+      margin: 0 auto;
+      overflow: visible;
+    }
 
-        @media (max-height: 740px) {
-            .main-container {
-                padding-top: 10px;
-                padding-bottom: 10px;
-            }
+    .gauge-track {
+      fill: none;
+      stroke: #34424d;
+      stroke-width: 15;
+      stroke-linecap: round;
+    }
 
-            .gauge-wrapper {
-                width: 180px;
-                height: 180px;
-            }
+    .gauge-value {
+      fill: none;
+      stroke: url(#gaugeGradient);
+      stroke-width: 15;
+      stroke-linecap: round;
+      transition: stroke-dasharray 0.8s ease;
+    }
 
-            .compact-card {
-                padding: 9px;
-            }
-        }
+    .gauge-number {
+      fill: var(--text);
+      font-size: 37px;
+      font-weight: 800;
+      text-anchor: middle;
+    }
 
-        @media (prefers-reduced-motion: reduce) {
-            *,
-            *::before,
-            *::after {
-                animation-duration: 0.01ms !important;
-                transition-duration: 0.01ms !important;
-                scroll-behavior: auto !important;
-            }
-        }
-    </style>
+    .gauge-label {
+      fill: var(--muted);
+      font-size: 12px;
+      text-anchor: middle;
+    }
+
+    .risk-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+      padding: 7px 18px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--panel-light);
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .risk-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #94a3b8;
+    }
+
+    .risk-description {
+      max-width: 360px;
+      margin: 12px auto 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .info-card {
+      min-width: 0;
+      padding: 15px 13px;
+      border: 1px solid var(--border);
+      border-radius: 17px;
+      background: var(--panel);
+    }
+
+    .info-label {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .info-value {
+      margin-top: 4px;
+      font-size: 15px;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+
+    .advice-card,
+    .location-card,
+    .details-card {
+      margin-top: 14px;
+      padding: 17px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--panel);
+    }
+
+    .card-heading {
+      margin: 0 0 9px;
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .advice-text,
+    .details-text {
+      margin: 0;
+      color: #d2dce4;
+      font-size: 13px;
+    }
+
+    .advice-list {
+      margin: 8px 0 0;
+      padding-right: 20px;
+      color: #d2dce4;
+      font-size: 13px;
+    }
+
+    .advice-list li {
+      margin: 5px 0;
+    }
+
+    .location-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .location-icon {
+      font-size: 23px;
+    }
+
+    .location-name {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .location-subtitle {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel-light);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .button-primary {
+      border-color: rgba(239, 68, 68, 0.35);
+      background: #7f2525;
+    }
+
+    .footer {
+      padding: 20px 8px 0;
+      color: var(--muted);
+      font-size: 11px;
+      text-align: center;
+    }
+
+    .loading {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .error-message {
+      display: none;
+      margin-top: 12px;
+      padding: 10px;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 12px;
+      background: rgba(239, 68, 68, 0.08);
+      color: #fecaca;
+      font-size: 12px;
+    }
+
+    .error-message.visible {
+      display: block;
+    }
+
+    @media (max-width: 360px) {
+      .container {
+        width: calc(100% - 20px);
+      }
+
+      .cards {
+        gap: 8px;
+      }
+
+      .info-card {
+        padding: 12px 10px;
+      }
+
+      .info-value {
+        font-size: 13px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition: none !important;
+      }
+    }
+  </style>
 </head>
 
-<body class="min-h-screen min-h-[100dvh] bg-slate-900 flex justify-center text-slate-800 antialiased">
+<body>
+  <main class="container">
 
-    <main class="main-container relative w-full max-w-md min-h-screen min-h-[100dvh]
-                 bg-gradient-to-b from-[#F8FAFC] via-[#EEF4F9] to-[#FFF5F5]
-                 flex flex-col overflow-hidden p-4 shadow-2xl">
+    <header class="header">
+      <div class="header-icon" aria-hidden="true">🔥</div>
 
-        <!-- پس‌زمینه کوهستان -->
-        <div class="absolute top-16 inset-x-0 h-64 pointer-events-none opacity-35 z-0"
-             aria-hidden="true">
-            <svg viewBox="0 0 500 240"
-                 class="w-full h-full"
-                 preserveAspectRatio="none">
+      <h1>سامانه هوشمند هشدار خطر حریق</h1>
 
-                <path d="M0 150 L110 70 L240 160 L370 85 L500 170 L500 240 L0 240 Z"
-                      fill="#CBD5E1" opacity="0.5"/>
+      <p class="subtitle">
+        پایش خطر آتش‌سوزی در کوهستان دراک شیراز
+      </p>
+    </header>
 
-                <path d="M0 180 L90 120 L210 190 L340 125 L460 200 L500 180 L500 240 L0 240 Z"
-                      fill="#94A3B8" opacity="0.4"/>
-            </svg>
+    <section class="status-card" aria-labelledby="riskHeading">
+      <h2 id="riskHeading" class="section-title">
+        سطح ارزیابی خطر
+      </h2>
+
+      <svg
+        class="gauge"
+        viewBox="0 0 240 160"
+        role="img"
+        aria-label="نمایش مقدار شاخص خطر"
+      >
+        <defs>
+          <linearGradient
+            id="gaugeGradient"
+            x1="0%"
+            y1="100%"
+            x2="100%"
+            y2="0%"
+          >
+            <stop offset="0%" stop-color="#22C55E" />
+            <stop offset="25%" stop-color="#EAB308" />
+            <stop offset="50%" stop-color="#F97316" />
+            <stop offset="75%" stop-color="#EF4444" />
+            <stop offset="100%" stop-color="#9333EA" />
+          </linearGradient>
+        </defs>
+
+        <path
+          class="gauge-track"
+          d="M 35 125 A 85 85 0 0 1 205 125"
+        />
+
+        <path
+          id="gaugeValue"
+          class="gauge-value"
+          d="M 35 125 A 85 85 0 0 1 205 125"
+          stroke-dasharray="0 267.04"
+        />
+
+        <text
+          id="gaugeNumber"
+          class="gauge-number"
+          x="120"
+          y="108"
+        >--</text>
+
+        <text
+          class="gauge-label"
+          x="120"
+          y="132"
+        >مقدار شاخص</text>
+      </svg>
+
+      <div class="risk-badge" aria-live="polite">
+        <span id="riskDot" class="risk-dot"></span>
+        <span id="riskLevel">در حال دریافت اطلاعات</span>
+      </div>
+
+      <p id="riskDescription" class="risk-description">
+        لطفاً تا دریافت اطلاعات منتظر بمانید.
+      </p>
+
+      <div id="errorMessage" class="error-message" role="alert"></div>
+    </section>
+
+    <section class="cards" aria-label="اطلاعات به‌روزرسانی">
+      <div class="info-card">
+        <div class="info-label">تاریخ آخرین داده</div>
+        <div id="dataDate" class="info-value">در انتظار اطلاعات</div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-label">وضعیت دریافت داده</div>
+        <div id="dataStatus" class="info-value">در حال بررسی</div>
+      </div>
+    </section>
+
+    <section class="advice-card">
+      <h2 class="card-heading">توصیه‌های ایمنی</h2>
+
+      <p id="adviceText" class="advice-text">
+        برای نمایش توصیه‌های متناسب با سطح خطر، اطلاعات در حال دریافت است.
+      </p>
+
+      <ul id="adviceList" class="advice-list">
+        <li>از روشن کردن آتش در پوشش گیاهی خودداری کنید.</li>
+        <li>ته‌سیگار و مواد مشتعل را در طبیعت رها نکنید.</li>
+      </ul>
+    </section>
+
+    <section class="location-card">
+      <div class="location-row">
+        <div class="location-icon" aria-hidden="true">📍</div>
+
+        <div>
+          <div class="location-name">کوهستان دراک</div>
+          <div class="location-subtitle">
+            شیراز، استان فارس
+          </div>
         </div>
-
-        <div class="relative z-10 flex flex-1 flex-col gap-3">
-
-            <!-- سربرگ -->
-            <header class="flex items-center justify-between gap-2">
-
-                <button
-                    id="refresh-button"
-                    type="button"
-                    class="btn-refresh shrink-0 p-2 bg-white/80 hover:bg-white
-                           rounded-xl shadow-sm transition active:scale-95
-                           disabled:opacity-50"
-                    aria-label="دریافت مجدد داده‌ها"
-                    title="به‌روزرسانی داده‌ها">
-
-                    <svg class="w-5 h-5 text-slate-700"
-                         fill="none"
-                         stroke="currentColor"
-                         stroke-width="2.2"
-                         viewBox="0 0 24 24"
-                         aria-hidden="true">
-
-                        <path stroke-linecap="round"
-                              stroke-linejoin="round"
-                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                    </svg>
-                </button>
-
-                <div class="flex-1 text-center">
-                    <h1 class="text-base font-black text-slate-800 tracking-tight">
-                        سامانه هوشمند هشدار خطر حریق
-                    </h1>
-
-                    <p class="text-[11px] font-semibold text-rose-600 mt-0.5">
-                        کوهستان دراک شیراز
-                    </p>
-                </div>
-
-                <div class="w-9 shrink-0" aria-hidden="true"></div>
-            </header>
-
-            <!-- راهنمای سامانه -->
-            <details class="glass-card bg-amber-50/95 border border-amber-200
-                            rounded-2xl p-3 text-right text-xs shadow-sm">
-
-                <summary class="font-bold text-amber-900 cursor-pointer
-                                flex justify-between items-center gap-2">
-
-                    <span>📖 راهنمای استفاده و عملکرد سامانه</span>
-                    <span class="text-amber-700" aria-hidden="true">▾</span>
-                </summary>
-
-                <div class="mt-3 pt-2 border-t border-amber-200/70
-                            text-[11px] text-amber-950 leading-relaxed space-y-2">
-
-                    <p>
-                        • <strong>پایش خطر:</strong>
-                        وضعیت خطر حریق بر اساس داده‌های شاخص هواشناسی FWI
-                        دریافت‌شده از منبع داده سامانه نمایش داده می‌شود.
-                    </p>
-
-                    <p>
-                        • <strong>گیج خطر:</strong>
-                        مقدار عددی FWI و سطح خطر گزارش‌شده را نمایش می‌دهد.
-                    </p>
-
-                    <p>
-                        • <strong>موقعیت GPS:</strong>
-                        با اجازه شما، مختصات دستگاه دریافت می‌شود تا بتوانید
-                        موقعیت را روی نقشه ببینید یا برای دیگران ارسال کنید.
-                    </p>
-
-                    <p>
-                        • <strong>تماس اضطراری:</strong>
-                        از شماره‌های تماس درج‌شده برای درخواست کمک استفاده کنید.
-                    </p>
-
-                    <p class="text-amber-800">
-                        توجه: شاخص FWI بیانگر شرایط مساعد برای گسترش حریق است؛
-                        به‌تنهایی وقوع آتش‌سوزی را پیش‌بینی نمی‌کند.
-                    </p>
-                </div>
-            </details>
-
-            <!-- نمایش شاخص خطر -->
-            <section class="flex flex-col items-center justify-center py-1"
-                     aria-label="وضعیت خطر حریق">
-
-                <div class="gauge-wrapper relative w-52 h-52 flex items-center justify-center">
-
-                    <svg class="w-full h-full"
-                         viewBox="0 0 220 220"
-                         role="img"
-                         aria-label="گیج نمایش مقدار شاخص FWI">
-
-                        <defs>
-                            <linearGradient id="gaugeGradient"
-                                            x1="0%" y1="100%"
-                                            x2="100%" y2="0%">
-
-                                <stop offset="0%" stop-color="#22C55E"/>
-                                <stop offset="25%" stop-color="#EAB308"/>
-                                <stop offset="50%" stop-color="#F97316"/>
-                                <stop offset="75%" stop-color="#EF4444"/>
-                                <stop offset="100%" stop-color="#9333EA"/>
-                            </linearGradient>
-                        </defs>
-
-                        <!-- مسیر پس‌زمینه گیج -->
-                        <circle
-                            cx="110"
-                            cy="110"
-                            r="88"
-                            fill="none"
-                            stroke="#E2E8F0"
-                            stroke-width="15"
-                            stroke-linecap="round"
-                            stroke-dasharray="414.69 552.92"
-                        />
-
-                        <!-- مقدار متناسب با FWI -->
-                        <circle
-                            id="gauge-bar"
-                            class="gauge-circle"
-                            cx="110"
-                            cy="110"
-                            r="88"
-                            fill="none"
-                            stroke="url(#gaugeGradient)"
-                            stroke-width="15"
-                            stroke-linecap="round"
-                            stroke-dasharray="414.69 552.92"
-                            stroke-dashoffset="414.69"
-                        />
-                    </svg>
-
-                    <div class="absolute inset-0 flex flex-col
-                                items-center justify-center text-center">
-
-                        <svg class="w-7 h-7 mb-1 text-rose-500"
-                             fill="currentColor"
-                             viewBox="0 0 24 24"
-                             aria-hidden="true">
-
-                            <path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.61 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z"/>
-                        </svg>
-
-                        <span class="text-[11px] font-bold text-slate-500">
-                            شاخص خطر FWI
-                        </span>
-
-                        <div id="fwi-value"
-                             class="text-2xl font-black text-slate-800 leading-tight my-1"
-                             dir="ltr"
-                             aria-live="polite">
-                            —
-                        </div>
-
-                        <div id="risk-pill"
-                             class="px-4 py-1.5 rounded-full text-white
-                                    text-xs font-black shadow-md bg-slate-500"
-                             aria-live="polite">
-                            در انتظار داده
-                        </div>
-                    </div>
-                </div>
-
-                <div id="update-badge"
-                     class="text-[11px] text-slate-600 font-bold mt-2 text-center"
-                     aria-live="polite">
-
-                    در حال دریافت اطلاعات...
-                </div>
-
-                <div id="data-source"
-                     class="text-[10px] text-slate-500 mt-1 text-center">
-
-                    منبع: فایل داده FWI سامانه
-                </div>
-            </section>
-
-            <!-- توصیه‌های ایمنی -->
-            <section class="compact-card glass-card bg-rose-50/90
-                            border border-rose-100 rounded-2xl p-3 shadow-sm"
-                     aria-labelledby="tips-heading">
-
-                <div class="flex items-center gap-2 mb-2">
-
-                    <span class="w-5 h-5 shrink-0 rounded-full bg-rose-500
-                                 text-white flex items-center justify-center
-                                 text-xs font-black"
-                          aria-hidden="true">!</span>
-
-                    <h2 id="tips-heading"
-                        class="text-xs font-extrabold text-slate-800">
-
-                        توصیه‌های ایمنی
-                    </h2>
-                </div>
-
-                <ul id="safety-tips"
-                    class="space-y-1.5 text-[11px] leading-relaxed
-                           text-slate-700 font-medium list-disc list-inside">
-
-                    <li>در حال بررسی شرایط خطر هستیم.</li>
-                </ul>
-            </section>
-
-            <!-- موقعیت مکانی -->
-            <section class="my-1">
-
-                <button
-                    id="gps-button"
-                    type="button"
-                    class="w-full bg-emerald-600 hover:bg-emerald-700
-                           text-white py-3 px-3 rounded-2xl font-bold text-xs
-                           flex items-center justify-center gap-2
-                           transition shadow-md active:scale-[0.98]">
-
-                    <span aria-hidden="true">📍</span>
-                    <span>ثبت موقعیت GPS و دریافت لینک ارسال</span>
-                </button>
-
-                <div id="gps-status"
-                     class="text-center text-[11px] text-slate-600
-                            font-medium mt-2 leading-relaxed"
-                     role="status"
-                     aria-live="polite"></div>
-            </section>
-
-            <!-- تماس‌های اضطراری -->
-            <section class="bg-rose-50/70 border border-rose-100
-                            rounded-2xl p-3 shadow-sm"
-                     aria-labelledby="emergency-heading">
-
-                <h2 id="emergency-heading"
-                    class="flex items-center justify-center gap-2
-                           text-[11px] font-extrabold text-slate-800 mb-2">
-
-                    <span aria-hidden="true">📞</span>
-                    تماس‌های اضطراری حریق
-                </h2>
-
-                <div class="grid grid-cols-2 gap-2 bg-white rounded-xl
-                            p-2 border border-rose-100/70">
-
-                    <a href="tel:137"
-                       class="flex flex-col items-center justify-center
-                              py-2 rounded-lg hover:bg-amber-50
-                              transition active:scale-95">
-
-                        <span class="text-amber-600 font-black text-sm">
-                            📞 ۱۳۷
-                        </span>
-
-                        <span class="text-[10px] text-slate-500
-                                     font-bold mt-1">
-                            شهرداری شیراز
-                        </span>
-                    </a>
-
-                    <a href="tel:125"
-                       class="flex flex-col items-center justify-center
-                              py-2 rounded-lg hover:bg-rose-50
-                              transition active:scale-95">
-
-                        <span class="text-rose-600 font-black text-sm">
-                            🚒 ۱۲۵
-                        </span>
-
-                        <span class="text-[10px] text-slate-500
-                                     font-bold mt-1">
-                            آتش‌نشانی
-                        </span>
-                    </a>
-                </div>
-
-                <p class="text-[10px] text-slate-500 text-center mt-2">
-                    در شرایط اضطراری، با توجه به نوع حادثه با مرجع مسئول تماس بگیرید.
-                </p>
-            </section>
-
-            <!-- پابرگ -->
-            <footer class="text-center text-[10px] text-slate-400 pt-1">
-                سامانه پایش خطر حریق کوهستان دراک
-            </footer>
-
-        </div>
-    </main>
-
-    <script>
-        'use strict';
-
-        // ----------------------------------------
-        // تنظیمات اصلی
-        // ----------------------------------------
-
-        const CONFIG = {
-            dataUrl: './data/derak_fwi.json',
-
-            // حداکثر مقدار نمایشی گیج؛ بر مقدار اصلی FWI تأثیری ندارد.
-            gaugeMax: 60,
-
-            // حداکثر زمان انتظار برای دریافت داده‌ها
-            timeoutMs: 15000,
-
-            // آستانه‌های نمایشی جایگزین، فقط وقتی منبع سطح خطر ندهد.
-            // برای بهره‌برداری رسمی باید با معیار معتبر منطقه‌ای تطبیق داده شوند.
-            fallbackThresholds: [
-                { max: 5,  label: 'کم',       color: '#16A34A', level: 1 },
-                { max: 10, label: 'متوسط',    color: '#CA8A04', level: 2 },
-                { max: 20, label: 'زیاد',     color: '#EA580C', level: 3 },
-                { max: 30, label: 'خیلی زیاد', color: '#DC2626', level: 4 },
-                { max: Infinity, label: 'بحرانی', color: '#9333EA', level: 5 }
-            ]
-        };
-
-        const $ = (id) => document.getElementById(id);
-
-        const elements = {
-            refresh: $('refresh-button'),
-            gps: $('gps-button'),
-            value: $('fwi-value'),
-            risk: $('risk-pill'),
-            gauge: $('gauge-bar'),
-            update: $('update-badge'),
-            tips: $('safety-tips'),
-            gpsStatus: $('gps-status')
-        };
-
-        let requestController = null;
-        let lastPosition = null;
-
-        const circumference = 2 * Math.PI * 88;
-        const gaugeArc = circumference * 0.75;
-
-        // ----------------------------------------
-        // تبدیل اعداد به ارقام فارسی
-        // ----------------------------------------
-
-        function toPersianDigits(value) {
-            return String(value ?? '').replace(/[0-9]/g, digit =>
-                '۰۱۲۳۴۵۶۷۸۹'[Number(digit)]
-            );
+      </div>
+
+      <div class="buttons">
+        <a
+          class="button"
+          href="https://www.google.com/maps/search/?api=1&query=Mount+Darak+Shiraz"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          مشاهده موقعیت
+        </a>
+
+        <button
+          id="refreshButton"
+          class="button button-primary"
+          type="button"
+        >
+          به‌روزرسانی اطلاعات
+        </button>
+      </div>
+    </section>
+
+    <section class="details-card">
+      <h2 class="card-heading">درباره سامانه</h2>
+
+      <p class="details-text">
+        این سامانه برای نمایش سطح خطر حریق در کوهستان دراک طراحی شده است.
+        سطح نمایش‌داده‌شده به اطلاعات موجود در فایل داده وابسته است و
+        به‌تنهایی به معنای مشاهده مستقیم آتش یا تأیید وقوع حریق نیست.
+        در صورت مشاهده آتش یا دود، از نزدیک شدن به محل خودداری کنید و
+        موضوع را به مراجع امدادی اطلاع دهید.
+      </p>
+    </section>
+
+    <footer class="footer">
+      سامانه پایش خطر حریق کوهستان دراک
+      <br>
+      اطلاعات نمایش‌داده‌شده تابع زمان به‌روزرسانی فایل داده است.
+    </footer>
+
+  </main>
+
+  <script>
+    "use strict";
+
+    const CONFIG = {
+      dataUrl: "./data/derak_fwi.json",
+      gaugeMax: 60,
+      requestTimeout: 15000
+    };
+
+    const elements = {
+      gaugeValue: document.getElementById("gaugeValue"),
+      gaugeNumber: document.getElementById("gaugeNumber"),
+      riskLevel: document.getElementById("riskLevel"),
+      riskDot: document.getElementById("riskDot"),
+      riskDescription: document.getElementById("riskDescription"),
+      dataDate: document.getElementById("dataDate"),
+      dataStatus: document.getElementById("dataStatus"),
+      adviceText: document.getElementById("adviceText"),
+      adviceList: document.getElementById("adviceList"),
+      errorMessage: document.getElementById("errorMessage"),
+      refreshButton: document.getElementById("refreshButton")
+    };
+
+    const gaugeCircumference = 267.04;
+
+    const riskLevels = [
+      {
+        min: 0,
+        max: 5.2,
+        label: "بسیار کم",
+        color: "#22c55e",
+        description: "شرایط کلی نشان‌دهنده سطح بسیار کم خطر حریق است.",
+        advice: "با وجود پایین بودن خطر، رعایت اصول ایمنی ضروری است.",
+        tips: [
+          "از روشن کردن آتش در نزدیکی پوشش گیاهی خودداری کنید.",
+          "زباله و مواد قابل اشتعال را در طبیعت رها نکنید."
+        ]
+      },
+      {
+        min: 5.2,
+        max: 11.2,
+        label: "کم",
+        color: "#84cc16",
+        description: "خطر حریق پایین است؛ با این حال امکان آتش‌سوزی وجود دارد.",
+        advice: "احتیاط معمول را رعایت کنید و از ایجاد منابع جرقه دوری کنید.",
+        tips: [
+          "از رها کردن ته‌سیگار و مواد مشتعل خودداری کنید.",
+          "در طبیعت آتش روشن نکنید، مگر در محل مجاز و ایمن."
+        ]
+      },
+      {
+        min: 11.2,
+        max: 21.3,
+        label: "متوسط",
+        color: "#eab308",
+        description: "شرایط می‌تواند به گسترش آتش کمک کند.",
+        advice: "در فعالیت‌های طبیعت‌گردی احتیاط بیشتری داشته باشید.",
+        tips: [
+          "از سوزاندن زباله و روشن کردن آتش خودداری کنید.",
+          "در صورت مشاهده دود، محل را ترک کنید و گزارش دهید."
+        ]
+      },
+      {
+        min: 21.3,
+        max: 38,
+        label: "زیاد",
+        color: "#f97316",
+        description: "احتمال گسترش سریع آتش افزایش یافته است.",
+        advice: "از فعالیت‌هایی که می‌توانند جرقه یا شعله ایجاد کنند، پرهیز کنید.",
+        tips: [
+          "از روشن کردن هرگونه آتش در طبیعت خودداری کنید.",
+          "در صورت مشاهده دود یا شعله، از نزدیک شدن به محل پرهیز کنید."
+        ]
+      },
+      {
+        min: 38,
+        max: 50,
+        label: "بسیار زیاد",
+        color: "#ef4444",
+        description: "شرایط برای گسترش آتش بسیار مساعد است.",
+        advice: "از فعالیت‌های پرخطر در پوشش‌های گیاهی خشک خودداری کنید.",
+        tips: [
+          "از روشن کردن آتش و هر فعالیت جرقه‌زا خودداری کنید.",
+          "هشدارهای رسمی و دستورهای ایمنی را دنبال کنید."
+        ]
+      },
+      {
+        min: 50,
+        max: Infinity,
+        label: "بحرانی",
+        color: "#9333ea",
+        description: "شرایط هواشناسی می‌تواند زمینه‌ساز گسترش بسیار سریع آتش باشد.",
+        advice: "از ورود غیرضروری به عرصه‌های طبیعی پرخطر خودداری کنید.",
+        tips: [
+          "از هرگونه آتش‌افروزی و فعالیت جرقه‌زا خودداری کنید.",
+          "در صورت مشاهده حریق، از منطقه فاصله بگیرید و موضوع را گزارش کنید."
+        ]
+      }
+    ];
+
+    function toEnglishDigits(value) {
+      return String(value ?? "").replace(/[۰-۹٠-٩]/g, function (digit) {
+        const persianDigits = "۰۱۲۳۴۵۶۷۸۹";
+        const arabicDigits = "٠١٢٣٤٥٦٧٨٩";
+
+        if (persianDigits.includes(digit)) {
+          return String(persianDigits.indexOf(digit));
         }
 
-        // ----------------------------------------
-        // پردازش مقدار عددی FWI
-        // ----------------------------------------
+        return String(arabicDigits.indexOf(digit));
+      });
+    }
 
-        function parseFWI(value) {
-            if (typeof value === 'string') {
-                value = value
-                    .replace(/[۰-۹]/g, digit =>
-                        String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit))
-                    )
-                    .replace(/[٠-٩]/g, digit =>
-                        String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit))
-                    )
-                    .trim()
-                    .replace(',', '.');
-            }
+    function toPersianDigits(value) {
+      return String(value).replace(/\d/g, function (digit) {
+        return "۰۱۲۳۴۵۶۷۸۹"[Number(digit)];
+      });
+    }
 
-            if (value === null || value === undefined || value === '') {
-                return null;
-            }
+    function parseNumber(value) {
+      if (value === null || value === undefined || value === "") {
+        return null;
+      }
 
-            const number = Number(value);
+      const normalized = toEnglishDigits(value)
+        .replace(/,/g, ".")
+        .trim();
 
-            if (!Number.isFinite(number) || number < 0) {
-                return null;
-            }
+      const number = Number(normalized);
 
-            return number;
+      return Number.isFinite(number) ? number : null;
+    }
+
+    function formatDate(value) {
+      if (!value) {
+        return "نامشخص";
+      }
+
+      let raw = String(value).trim();
+
+      /*
+       * اگر تاریخ میلادی به شکل ISO باشد،
+       * فقط سال، ماه و روز استخراج می‌شوند.
+       * بخش ساعت و منطقه زمانی نمایش داده نمی‌شود.
+       */
+      const isoMatch = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+
+      if (isoMatch) {
+        const year = Number(isoMatch[1]);
+        const month = Number(isoMatch[2]);
+        const day = Number(isoMatch[3]);
+
+        const date = new Date(year, month - 1, day);
+
+        if (!Number.isNaN(date.getTime())) {
+          return new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
+            year: "numeric",
+            month: "long",
+            day: "numeric"
+          }).format(date);
+        }
+      }
+
+      /*
+       * حذف ساعت از تاریخ‌های متنی، از جمله تاریخ شمسی.
+       */
+      raw = raw.replace(
+        /\s*(?:[-–—]\s*)?[۰-۹٠-٩0-9]{1,2}:[۰-۹٠-٩0-9]{2}(?::[۰-۹٠-٩0-9]{2})?(?:\s*(?:AM|PM))?\s*$/i,
+        ""
+      ).trim();
+
+      /*
+       * اگر تاریخ ISO همراه ساعت بود اما با الگوی اول
+       * قابل تبدیل نشد، فقط بخش پیش از T یا فاصله گرفته می‌شود.
+       */
+      if (/^\d{4}-\d{1,2}-\d{1,2}[T ]/.test(raw)) {
+        raw = raw.split(/[T ]/)[0];
+      }
+
+      return toPersianDigits(raw);
+    }
+
+    function getRisk(value) {
+      for (const risk of riskLevels) {
+        if (value >= risk.min && value < risk.max) {
+          return risk;
+        }
+      }
+
+      return riskLevels[riskLevels.length - 1];
+    }
+
+    function showError(message) {
+      elements.errorMessage.textContent = message;
+      elements.errorMessage.classList.add("visible");
+    }
+
+    function hideError() {
+      elements.errorMessage.textContent = "";
+      elements.errorMessage.classList.remove("visible");
+    }
+
+    function updateGauge(value, risk) {
+      const safeValue = Math.max(0, Math.min(value, CONFIG.gaugeMax));
+      const fraction = safeValue / CONFIG.gaugeMax;
+      const progress = gaugeCircumference * fraction;
+
+      elements.gaugeValue.setAttribute(
+        "stroke-dasharray",
+        `${progress} ${gaugeCircumference}`
+      );
+
+      elements.gaugeNumber.textContent = toPersianDigits(
+        Number(value.toFixed(1)).toString()
+      );
+
+      elements.riskLevel.textContent = risk.label;
+      elements.riskDot.style.backgroundColor = risk.color;
+      elements.riskBadge = elements.riskLevel.parentElement;
+      elements.riskBadge.style.borderColor = risk.color + "66";
+
+      elements.riskDescription.textContent = risk.description;
+      elements.adviceText.textContent = risk.advice;
+
+      elements.adviceList.replaceChildren();
+
+      risk.tips.forEach(function (tip) {
+        const item = document.createElement("li");
+        item.textContent = tip;
+        elements.adviceList.appendChild(item);
+      });
+    }
+
+    function extractData(payload) {
+      const root = payload?.data ?? payload?.result ?? payload;
+
+      const possibleValues = [
+        root?.fwi,
+        root?.FWI,
+        root?.value,
+        root?.index,
+        root?.current?.fwi,
+        root?.current?.value,
+        payload?.fwi,
+        payload?.FWI,
+        payload?.value
+      ];
+
+      let value = null;
+
+      for (const candidate of possibleValues) {
+        value = parseNumber(candidate);
+
+        if (value !== null) {
+          break;
+        }
+      }
+
+      const possibleDates = [
+        root?.date,
+        root?.updated_at,
+        root?.updatedAt,
+        root?.timestamp,
+        root?.datetime,
+        root?.last_update,
+        root?.lastUpdated,
+        payload?.date,
+        payload?.updated_at,
+        payload?.updatedAt,
+        payload?.timestamp
+      ];
+
+      let date = null;
+
+      for (const candidate of possibleDates) {
+        if (candidate !== undefined && candidate !== null && candidate !== "") {
+          date = candidate;
+          break;
+        }
+      }
+
+      return { value, date };
+    }
+
+    async function loadData() {
+      elements.refreshButton.disabled = true;
+      elements.refreshButton.textContent = "در حال دریافت...";
+      elements.dataStatus.textContent = "در حال دریافت";
+      hideError();
+
+      const controller = new AbortController();
+      const timeout = setTimeout(
+        () => controller.abort(),
+        CONFIG.requestTimeout
+      );
+
+      try {
+        const separator = CONFIG.dataUrl.includes("?") ? "&" : "?";
+        const url = CONFIG.dataUrl + separator + "_=" + Date.now();
+
+        const response = await fetch(url, {
+          cache: "no-store",
+          signal: controller.signal,
+          headers: {
+            "Accept": "application/json"
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error("HTTP " + response.status);
         }
 
-        // ----------------------------------------
-        // نمایش تاریخ
-        // ----------------------------------------
+        const payload = await response.json();
+        const data = extractData(payload);
 
-        function formatDate(value) {
-            if (value === null || value === undefined || value === '') {
-                return 'در داده دریافتی ثبت نشده است';
-            }
-
-            const raw = String(value).trim();
-
-            // اگر تاریخ از قبل شمسی یا دارای نام ماه فارسی باشد،
-            // آن را به‌عنوان تاریخ آماده نمایش حفظ می‌کنیم.
-            if (
-                /[آ-ی]/.test(raw) ||
-                /۱۴۰[۰-۹]/.test(raw) ||
-                /13\d{2}[/-]/.test(raw)
-            ) {
-                return toPersianDigits(raw);
-            }
-
-            // پشتیبانی از تاریخ میلادی ISO مانند:
-            // 2026-10-25 یا 2026-10-25T00:00:00Z
-            const match = raw.match(
-                /^(\d{4})-(\d{2})-(\d{2})(?:$|T|\s)/
-            );
-
-            if (match) {
-                const date = new Date(
-                    Number(match[1]),
-                    Number(match[2]) - 1,
-                    Number(match[3])
-                );
-
-                if (!Number.isNaN(date.getTime())) {
-                    return new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                    }).format(date);
-                }
-            }
-
-            // تاریخ ناشناخته را حدس نمی‌زنیم.
-            return toPersianDigits(raw);
+        if (data.value === null || data.value < 0) {
+          throw new Error("مقدار شاخص در فایل داده معتبر نیست.");
         }
 
-        function getUpdateDate(data) {
-            return (
-                data.updated_at ??
-                data.forecast_shamsi ??
-                data.forecast_date ??
-                data.date ??
-                null
-            );
+        const risk = getRisk(data.value);
+
+        updateGauge(data.value, risk);
+
+        elements.dataDate.textContent = formatDate(
+          data.date || payload?.date || payload?.updated_at
+        );
+
+        elements.dataStatus.textContent = "دریافت موفق";
+        elements.dataStatus.style.color = "#22c55e";
+      } catch (error) {
+        elements.dataStatus.textContent = "دریافت ناموفق";
+        elements.dataStatus.style.color = "#f87171";
+
+        if (error.name === "AbortError") {
+          showError("دریافت اطلاعات بیش از حد طول کشید. دوباره تلاش کنید.");
+        } else if (error instanceof TypeError) {
+          showError(
+            "فایل داده دریافت نشد. مسیر فایل و انتشار سایت را بررسی کنید."
+          );
+        } else {
+          showError(
+            error.message || "هنگام دریافت اطلاعات خطایی رخ داد."
+          );
         }
 
-        // ----------------------------------------
-        // تعیین سطح خطر
-        // ----------------------------------------
-
-        function getRisk(data, fwi) {
-            const suppliedLabel =
-                typeof data.risk_level_fa === 'string'
-                    ? data.risk_level_fa.trim()
-                    : '';
-
-            const suppliedColor =
-                typeof data.risk_color === 'string' &&
-                /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(data.risk_color)
-                    ? data.risk_color
-                    : null;
-
-            // اگر منبع سطح خطر را مشخص کرده باشد،
-            // همان مقدار را در اولویت قرار می‌دهیم.
-            if (suppliedLabel) {
-                return {
-                    label: suppliedLabel,
-                    color: suppliedColor || '#64748B',
-                    level: null
-                };
-            }
-
-            // در نبود سطح خطر منبع، از آستانه‌های قابل تنظیم استفاده می‌شود.
-            return CONFIG.fallbackThresholds.find(
-                item => fwi <= item.max
-            );
-        }
-
-        // ----------------------------------------
-        // توصیه‌های ایمنی
-        // ----------------------------------------
-
-        function getSafetyTips(level) {
-            if (level === null) {
-                return [
-                    'سطح خطر از منبع داده دریافت شده است؛ توصیه‌ها را با دستورالعمل محلی تطبیق دهید.',
-                    'در شرایط نامساعد، از ایجاد هرگونه شعله و رها کردن مواد قابل اشتعال خودداری کنید.',
-                    'در صورت مشاهده حریق یا دود مشکوک، با مرجع امدادی مسئول تماس بگیرید.'
-                ];
-            }
-
-            if (level >= 5) {
-                return [
-                    'خطر بسیار شدید است؛ از ورود غیرضروری به محدوده‌های طبیعی پرخطر خودداری کنید.',
-                    'از روشن کردن آتش، انداختن ته‌سیگار و هرگونه اقدام ایجادکننده جرقه پرهیز کنید.',
-                    'در صورت مشاهده دود یا حریق، از محل خطر فاصله بگیرید و موضوع را گزارش کنید.'
-                ];
-            }
-
-            if (level === 4) {
-                return [
-                    'خطر حریق بسیار زیاد است؛ از روشن کردن آتش در طبیعت خودداری کنید.',
-                    'از رها کردن ته‌سیگار، شیشه و مواد قابل اشتعال در طبیعت پرهیز کنید.',
-                    'هنگام مشاهده دود، موقعیت را ثبت و به مرجع مسئول اطلاع دهید.'
-                ];
-            }
-
-            if (level === 3) {
-                return [
-                    'خطر حریق بالاست؛ از ایجاد شعله در پوشش گیاهی خودداری کنید.',
-                    'مواد قابل اشتعال را در طبیعت رها نکنید.',
-                    'در صورت مشاهده حریق، از نزدیک شدن به محل خودداری کنید.'
-                ];
-            }
-
-            if (level === 2) {
-                return [
-                    'با وجود خطر متوسط، امکان گسترش آتش وجود دارد.',
-                    'از روشن کردن آتش در نزدیکی بوته‌ها و پوشش خشک خودداری کنید.',
-                    'پیش از ترک محل، از خاموش شدن کامل هرگونه آتش مطمئن شوید.'
-                ];
-            }
-
-            return [
-                'حتی در شرایط خطر کم، آتش را در پوشش گیاهی روشن نکنید.',
-                'از رها کردن زباله، ته‌سیگار و مواد قابل اشتعال در طبیعت خودداری کنید.',
-                'هرگونه آتش را به‌طور کامل خاموش کنید و محیط را ایمن ترک کنید.'
-            ];
-        }
-
-        function renderTips(items, emphasize = false) {
-            elements.tips.replaceChildren();
-
-            items.forEach((message, index) => {
-                const li = document.createElement('li');
-                li.textContent = message;
-
-                if (emphasize && index === 0) {
-                    li.className = 'font-bold text-rose-800';
-                }
-
-                elements.tips.appendChild(li);
-            });
-        }
-
-        // ----------------------------------------
-        // نمایش خطای داده
-        // ----------------------------------------
-
-        function showDataError(message) {
-            elements.value.textContent = '—';
-
-            elements.risk.textContent = 'داده در دسترس نیست';
-            elements.risk.style.backgroundColor = '#64748B';
-
-            elements.gauge.style.strokeDashoffset = gaugeArc;
-            elements.gauge.style.opacity = '0.25';
-
-            elements.update.textContent = message;
-
-            renderTips([
-                'در حال حاضر امکان تأیید سطح خطر از طریق داده‌های سامانه وجود ندارد.',
-                'تا زمان بررسی شرایط، اصول احتیاط در طبیعت را رعایت کنید.',
-                'در صورت مشاهده حریق، با مرجع امدادی مسئول تماس بگیرید.'
-            ]);
-        }
-
-        // ----------------------------------------
-        // بارگذاری اطلاعات FWI
-        // ----------------------------------------
-
-        async function loadFWI() {
-            if (requestController) {
-                requestController.abort();
-            }
-
-            requestController = new AbortController();
-
-            const controller = requestController;
-            const timeout = setTimeout(
-                () => controller.abort(),
-                CONFIG.timeoutMs
-            );
-
-            elements.refresh.disabled = true;
-            elements.refresh.setAttribute('aria-busy', 'true');
-
-            elements.update.textContent = 'در حال دریافت آخرین داده‌ها...';
-
-            try {
-                const response = await fetch(
-                    `${CONFIG.dataUrl}?_=${Date.now()}`,
-                    {
-                        method: 'GET',
-                        cache: 'no-store',
-                        signal: controller.signal,
-                        headers: {
-                            Accept: 'application/json'
-                        }
-                    }
-                );
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-
-                const data = await response.json();
-
-                if (!data || typeof data !== 'object' || Array.isArray(data)) {
-                    throw new Error('Invalid data format');
-                }
-
-                const fwi = parseFWI(data.fwi);
-
-                if (fwi === null) {
-                    throw new Error('Invalid FWI value');
-                }
-
-                const risk = getRisk(data, fwi);
-
-                // مقدار عددی شاخص
-                elements.value.textContent = toPersianDigits(
-                    fwi.toFixed(2)
-                );
-
-                // سطح خطر و رنگ
-                elements.risk.textContent = risk.label;
-                elements.risk.style.backgroundColor = risk.color;
-
-                // مقدار گیج محدود می‌شود؛ مقدار واقعی FWI تغییر نمی‌کند.
-                const ratio = Math.min(
-                    1,
-                    fwi / CONFIG.gaugeMax
-                );
-
-                elements.gauge.style.strokeDashoffset =
-                    gaugeArc * (1 - ratio);
-
-                elements.gauge.style.opacity = '1';
-
-                // تاریخ به‌روزرسانی
-                const updateDate = getUpdateDate(data);
-
-                elements.update.textContent = updateDate
-                    ? `آخرین به‌روزرسانی ثبت‌شده: ${formatDate(updateDate)}`
-                    : 'تاریخ به‌روزرسانی در فایل داده ثبت نشده است';
-
-                // هماهنگی توصیه‌ها با سطح خطر
-                renderTips(
-                    getSafetyTips(risk.level),
-                    risk.level !== null && risk.level >= 4
-                );
-
-            } catch (error) {
-                if (error.name === 'AbortError') {
-                    if (requestController === controller) {
-                        showDataError(
-                            'دریافت داده ناموفق بود؛ اتصال و منبع داده را بررسی کنید.'
-                        );
-                    }
-                } else {
-                    console.error('FWI loading error:', error);
-
-                    if (requestController === controller) {
-                        showDataError(
-                            'داده معتبر دریافت نشد؛ وضعیت خطر قابل تأیید نیست.'
-                        );
-                    }
-                }
-            } finally {
-                clearTimeout(timeout);
-
-                if (requestController === controller) {
-                    requestController = null;
-                    elements.refresh.disabled = false;
-                    elements.refresh.removeAttribute('aria-busy');
-                }
-            }
-        }
-
-        // ----------------------------------------
-        // مدیریت GPS
-        // ----------------------------------------
-
-        function setGPSMessage(message) {
-            elements.gpsStatus.textContent = message;
-        }
-
-        function addGPSButton(container, label, callback) {
-            const button = document.createElement('button');
-
-            button.type = 'button';
-            button.textContent = label;
-            button.className =
-                'bg-slate-100 hover:bg-slate-200 text-slate-700 ' +
-                'px-3 py-2 rounded-lg text-[11px] font-bold';
-
-            button.addEventListener('click', callback);
-
-            container.appendChild(button);
-
-            return button;
-        }
-
-        function renderGPSActions(latitude, longitude) {
-            const mapLink =
-                `https://maps.google.com/?q=${latitude},${longitude}`;
-
-            elements.gpsStatus.replaceChildren();
-
-            const coordinates = document.createElement('p');
-            coordinates.className = 'mb-2';
-            coordinates.dir = 'ltr';
-            coordinates.textContent = `${latitude}, ${longitude}`;
-
-            elements.gpsStatus.appendChild(coordinates);
-
-            const actions = document.createElement('div');
-
-            actions.className =
-                'flex flex-wrap items-center justify-center gap-2';
-
-            const mapButton = document.createElement('a');
-            mapButton.href = mapLink;
-            mapButton.target = '_blank';
-            mapButton.rel = 'noopener noreferrer';
-            mapButton.textContent = 'نمایش روی نقشه';
-            mapButton.className =
-                'bg-blue-50 text-blue-700 px-3 py-2 rounded-lg ' +
-                'text-[11px] font-bold';
-
-            actions.appendChild(mapButton);
-
-            addGPSButton(actions, 'کپی لینک', async () => {
-                try {
-                    await navigator.clipboard.writeText(mapLink);
-                    setGPSMessage('لینک موقعیت با موفقیت کپی شد.');
-                } catch (error) {
-                    setGPSMessage(
-                        'کپی خودکار ممکن نشد؛ لینک را از طریق نقشه باز کنید.'
-                    );
-                }
-            });
-
-            if (navigator.share) {
-                addGPSButton(actions, 'ارسال موقعیت', async () => {
-                    try {
-                        await navigator.share({
-                            title: 'موقعیت کوهستان دراک',
-                            text:
-                                `موقعیت من:\n` +
-                                `عرض جغرافیایی: ${latitude}\n` +
-                                `طول جغرافیایی: ${longitude}`,
-                            url: mapLink
-                        });
-                    } catch (error) {
-                        if (error.name !== 'AbortError') {
-                            setGPSMessage(
-                                'ارسال موقعیت انجام نشد؛ لینک نقشه را باز کنید.'
-                            );
-                        }
-                    }
-                });
-            }
-
-            elements.gpsStatus.appendChild(actions);
-        }
-
-        function getGPS() {
-            if (!navigator.geolocation) {
-                setGPSMessage(
-                    'مرورگر شما از مکان‌یابی پشتیبانی نمی‌کند.'
-                );
-                return;
-            }
-
-            if (!window.isSecureContext) {
-                setGPSMessage(
-                    'برای استفاده از GPS، صفحه باید از طریق HTTPS باز شود.'
-                );
-                return;
-            }
-
-            elements.gps.disabled = true;
-            setGPSMessage('در حال دریافت مختصات دستگاه...');
-
-            navigator.geolocation.getCurrentPosition(
-                position => {
-                    elements.gps.disabled = false;
-
-                    const latitude =
-                        position.coords.latitude.toFixed(6);
-
-                    const longitude =
-                        position.coords.longitude.toFixed(6);
-
-                    lastPosition = {
-                        latitude,
-                        longitude
-                    };
-
-                    setGPSMessage(
-                        'موقعیت دریافت شد. برای مشاهده یا ارسال آن از گزینه‌های زیر استفاده کنید.'
-                    );
-
-                    renderGPSActions(latitude, longitude);
-                },
-
-                error => {
-                    elements.gps.disabled = false;
-
-                    let message =
-                        'دریافت موقعیت ناموفق بود. دوباره تلاش کنید.';
-
-                    if (error.code === 1) {
-                        message =
-                            'اجازه مکان‌یابی داده نشده است؛ دسترسی موقعیت را در مرورگر فعال کنید.';
-                    } else if (error.code === 2) {
-                        message =
-                            'موقعیت دستگاه مشخص نشد؛ GPS و سرویس مکان‌یابی را بررسی کنید.';
-                    } else if (error.code === 3) {
-                        message =
-                            'زمان دریافت موقعیت به پایان رسید؛ دوباره تلاش کنید.';
-                    }
-
-                    setGPSMessage(message);
-                },
-
-                {
-                    enableHighAccuracy: true,
-                    timeout: 20000,
-                    maximumAge: 0
-                }
-            );
-        }
-
-        // ----------------------------------------
-        // رویدادها و شروع سامانه
-        // ----------------------------------------
-
-        elements.refresh.addEventListener('click', loadFWI);
-        elements.gps.addEventListener('click', getGPS);
-
-        loadFWI();
-    </script>
+        elements.riskDescription.textContent =
+          "به دلیل در دسترس نبودن داده معتبر، سطح خطر فعلی قابل اعلام نیست.";
+
+        elements.riskLevel.textContent = "اطلاعات ناموجود";
+        elements.riskDot.style.backgroundColor = "#94a3b8";
+        elements.gaugeNumber.textContent = "--";
+        elements.gaugeValue.setAttribute(
+          "stroke-dasharray",
+          `0 ${gaugeCircumference}`
+        );
+
+        elements.dataDate.textContent = "نامشخص";
+      } finally {
+        clearTimeout(timeout);
+        elements.refreshButton.disabled = false;
+        elements.refreshButton.textContent = "به‌روزرسانی اطلاعات";
+      }
+    }
+
+    elements.refreshButton.addEventListener("click", loadData);
+
+    loadData();
+  </script>
 </body>
 </html>
