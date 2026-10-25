@@ -351,9 +351,9 @@
 
                 <svg class="w-full h-full" viewBox="0 0 220 220" role="img" aria-label="گیج سطح خطر حریق">
 
-                    <!-- گرادینت پیوسته منطبق بر چرخش ساعت ۱۲ -->
+                    <!-- گرادینت دایره‌ای با چرخش ۹۰ درجه برای شروع دقیق سبز از ساعت ۱۲ به صورت ساعت‌گرد -->
                     <defs>
-                        <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <linearGradient id="gaugeGradient" x1="0%" y1="100%" x2="0%" y2="0%" gradientTransform="rotate(90 0.5 0.5)">
                             <stop offset="0%" stop-color="#22C55E"/>
                             <stop offset="25%" stop-color="#EAB308"/>
                             <stop offset="50%" stop-color="#F97316"/>
@@ -372,7 +372,7 @@
                         stroke-width="20"
                     />
 
-                    <!-- نوار مقدار زنده (ساعت‌گرد از ساعت ۱۲ با پهنای پر رنگی داخل خود نوار) -->
+                    <!-- نوار مقدار زنده (ساعت‌گرد از ساعت ۱۲) -->
                     <circle
                         id="gauge-bar"
                         cx="110"
@@ -417,8 +417,6 @@
             <div id="update-badge" class="text-xs text-slate-600 font-bold mt-2 text-center">
                 آخرین به‌روزرسانی داده‌ها: در انتظار دریافت
             </div>
-
-            <div id="data-status" class="text-[10px] text-slate-500 text-center mt-1" aria-live="polite"></div>
         </section>
 
         <!-- توصیه‌های ایمنی -->
@@ -642,11 +640,9 @@
     async function loadData() {
         const pill = document.getElementById('risk-pill');
         const dateBadge = document.getElementById('update-badge');
-        const status = document.getElementById('data-status');
         const refreshButton = document.getElementById('refresh-button');
 
         refreshButton.disabled = true;
-        status.textContent = 'در حال دریافت اطلاعات...';
 
         try {
             const response = await fetch(
@@ -688,10 +684,6 @@
             dateBadge.textContent =
                 'آخرین به‌روزرسانی داده‌ها: ' + cleanPersianDate(rawDate);
 
-            status.textContent = 'اطلاعات با موفقیت دریافت شد.';
-            status.className =
-                'text-center text-[10px] text-emerald-700 mt-1';
-
         } catch (error) {
             console.error('خطا در دریافت داده:', error);
 
@@ -718,11 +710,6 @@
                 item.textContent = text;
                 list.appendChild(item);
             });
-
-            status.textContent =
-                'دریافت اطلاعات ناموفق بود؛ مسیر فایل داده را بررسی کنید.';
-            status.className =
-                'text-center text-[10px] text-rose-700 mt-1';
 
         } finally {
             refreshButton.disabled = false;
