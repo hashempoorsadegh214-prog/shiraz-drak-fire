@@ -76,16 +76,10 @@
             position: relative;
         }
 
-        .gauge-arc {
-            fill: none;
-            stroke-width: 15;
-            stroke-linecap: butt;
-        }
-
         #gauge-bar {
             fill: none;
-            stroke-width: 8;
-            stroke-linecap: round;
+            stroke-width: 20;
+            stroke-linecap: butt;
             transition: stroke-dasharray 0.8s ease;
         }
 
@@ -357,76 +351,6 @@
 
                 <svg class="w-full h-full" viewBox="0 0 220 220" role="img" aria-label="گیج سطح خطر حریق">
 
-                    <!-- زمینه خاکستری دایره -->
-                    <circle
-                        cx="110"
-                        cy="110"
-                        r="88"
-                        fill="none"
-                        stroke="#E2E8F0"
-                        stroke-width="15"
-                    />
-
-                    <!--
-                        تقسیم‌بندی ۵ کلاسه دایره کامل (محیط = 552.92):
-                        شروع دقیق: ساعت ۱۲ (rotate -90 درجه)
-                        جهت: ساعت‌گرد
-                        طول هر بخش: 110.58 واحد
-                        1. سبز: ساعت 12 تا 2:24
-                        2. زرد: ساعت 2:24 تا 4:48
-                        3. نارنجی: ساعت 4:48 تا 7:12
-                        4. قرمز: ساعت 7:12 تا 9:36
-                        5. بنفش: ساعت 9:36 تا 12 (بحرانی)
-                    -->
-                    <g transform="rotate(-90 110 110)">
-
-                        <!-- ۱. سبز (ساعت ۱۲ به بعد) -->
-                        <circle
-                            class="gauge-arc"
-                            cx="110" cy="110" r="88"
-                            stroke="#22C55E"
-                            stroke-dasharray="110.58 442.34"
-                            stroke-dashoffset="0"
-                        />
-
-                        <!-- ۲. زرد -->
-                        <circle
-                            class="gauge-arc"
-                            cx="110" cy="110" r="88"
-                            stroke="#EAB308"
-                            stroke-dasharray="110.58 442.34"
-                            stroke-dashoffset="-110.58"
-                        />
-
-                        <!-- ۳. نارنجی -->
-                        <circle
-                            class="gauge-arc"
-                            cx="110" cy="110" r="88"
-                            stroke="#F97316"
-                            stroke-dasharray="110.58 442.34"
-                            stroke-dashoffset="-221.17"
-                        />
-
-                        <!-- ۴. قرمز -->
-                        <circle
-                            class="gauge-arc"
-                            cx="110" cy="110" r="88"
-                            stroke="#EF4444"
-                            stroke-dasharray="110.58 442.34"
-                            stroke-dashoffset="-331.75"
-                        />
-
-                        <!-- ۵. بنفش (بحرانی: نزدیک ساعت ۱۰ تا ۱۲) -->
-                        <circle
-                            class="gauge-arc"
-                            cx="110" cy="110" r="88"
-                            stroke="#9333EA"
-                            stroke-dasharray="110.58 442.34"
-                            stroke-dashoffset="-442.34"
-                        />
-
-                    </g>
-
                     <!-- گرادینت پیوسته منطبق بر چرخش ساعت ۱۲ -->
                     <defs>
                         <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -438,14 +362,24 @@
                         </linearGradient>
                     </defs>
 
-                    <!-- نوار مقدار زنده (ساعت‌گرد از ساعت ۱۲) -->
+                    <!-- زمینه خاکستری کم‌رنگ پشت گیج -->
+                    <circle
+                        cx="110"
+                        cy="110"
+                        r="85"
+                        fill="none"
+                        stroke="#E2E8F0"
+                        stroke-width="20"
+                    />
+
+                    <!-- نوار مقدار زنده (ساعت‌گرد از ساعت ۱۲ با پهنای پر رنگی داخل خود نوار) -->
                     <circle
                         id="gauge-bar"
                         cx="110"
                         cy="110"
-                        r="88"
+                        r="85"
                         stroke="url(#gaugeGradient)"
-                        stroke-dasharray="0 552.92"
+                        stroke-dasharray="0 534.07"
                         transform="rotate(-90 110 110)"
                     />
 
@@ -554,8 +488,8 @@
 <script>
     const DATA_URL = './data/derak_fwi.json';
     const MAX_VALUE = 60;
-    const RADIUS = 88;
-    const CIRCUMFERENCE = 2 * Math.PI * RADIUS; // 552.92
+    const RADIUS = 85;
+    const CIRCUMFERENCE = 2 * Math.PI * RADIUS; // ~534.07
 
     function toPersianDigits(value) {
         return String(value ?? '').replace(/[0-9]/g, digit =>
