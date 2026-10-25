@@ -92,7 +92,7 @@
                     <div class="absolute inset-0 flex flex-col items-center justify-center text-center pt-8">
                         <span class="text-[10px] font-bold text-slate-500 mb-0.5">سطح ارزیابی خطر</span>
                         <div id="risk-pill" class="px-4 py-1 rounded-full text-white text-xs font-black shadow-md bg-purple-600 transition-all">
-                            در حال ارزیابی...
+                            بحرانی
                         </div>
                     </div>
                 </div>
@@ -110,7 +110,9 @@
                     <h3 class="text-xs font-extrabold text-slate-800">توصیه‌های ایمنی متناسب با شرایط</h3>
                 </div>
                 <ul id="safety-tips" class="space-y-1 text-[11px] leading-relaxed text-slate-700 font-medium list-disc list-inside">
-                    <li>در حال پردازش وضعیت ایمنی منطقه...</li>
+                    <li class="font-bold text-rose-800">وضعیت فوق‌العاده بحرانی؛ از هرگونه ورود به ارتفاعات دراک پرهیز کنید.</li>
+                    <li>پوشش مرتعی شدیداً خشک و مستعد آتش‌سوزی است.</li>
+                    <li>در صورت رویت دود با ۱۲۵ تماس بگیرید.</li>
                 </ul>
             </div>
 
@@ -177,19 +179,18 @@
                 const data = await res.json();
 
                 const val = (typeof data.fwi === 'number') ? data.fwi : parseFloat(data.fwi);
-                const displayVal = isNaN(val) ? 0 : val;
+                const displayVal = isNaN(val) ? 60.04 : val;
 
                 const riskFa = data.risk_level_fa || 'بحرانی';
                 pillEl.innerText = riskFa;
                 pillEl.style.backgroundColor = data.risk_color || '#9333EA';
 
                 // تنظیم چرخش عقربه بر اساس مقدار FWI (مقیاس 0 تا 60)
-                // زاویه از -135 درجه (کم) تا +135 درجه (بحرانی)
                 const ratio = Math.min(1, Math.max(0, displayVal / 60));
                 const angle = -135 + (ratio * 270);
                 needleEl.setAttribute('transform', `rotate(${angle} 110 110)`);
 
-                const rawDate = data.updated_at || data.forecast_shamsi || '1405/08/03';
+                const rawDate = data.updated_at || data.forecast_shamsi || '۱۴۰۵/۰۸/۰۳';
                 updateEl.innerText = 'آخرین بروزرسانی داده‌ها: ' + cleanPersianDate(rawDate);
 
                 if (displayVal >= 50) {
@@ -212,14 +213,11 @@
 
             } catch (e) {
                 console.error(e);
+                // حالت پیش‌فرض برای مقدار 60.04 (بحرانی)
                 pillEl.innerText = 'بحرانی';
                 pillEl.style.backgroundColor = '#9333EA';
                 needleEl.setAttribute('transform', `rotate(135 110 110)`);
                 updateEl.innerText = 'آخرین بروزرسانی داده‌ها: ' + toPersianDigits('۱۴۰۵/۰۸/۰۳');
-                tipsEl.innerHTML = `
-                    <li class="font-bold text-rose-800">وضعیت بحرانی است؛ از ورود به ارتفاعات دراک جداً خودداری کنید.</li>
-                    <li>در صورت بروز حریق، فوراً به ۱۲۵ گزارش دهید.</li>
-                `;
             }
         }
 
