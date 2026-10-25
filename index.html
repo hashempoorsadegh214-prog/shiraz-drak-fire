@@ -23,14 +23,19 @@
             -webkit-tap-highlight-color: transparent;
         }
 
+        body {
+            background: #EEF4F9;
+        }
+
         .app {
             width: 100%;
-            max-width: 448px;
+            max-width: 480px;
             height: 100vh;
             height: 100dvh;
+            margin: 0 auto;
+            padding: 12px 14px 9px;
             overflow: hidden;
             position: relative;
-            padding: 10px 14px;
             display: flex;
             flex-direction: column;
             background: linear-gradient(to bottom, #F8FAFC, #EEF4F9 55%, #FFF5F5);
@@ -44,13 +49,104 @@
             justify-content: space-between;
             flex: 1;
             min-height: 0;
-            gap: 5px;
+            gap: 7px;
+        }
+
+        .header-title {
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        .gauge-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1 1 auto;
+            min-height: 0;
+            padding: 2px 0;
+        }
+
+        .gauge-wrap {
+            width: min(62vw, 250px, 32vh);
+            height: min(62vw, 250px, 32vh);
+            min-width: 190px;
+            min-height: 190px;
+            flex-shrink: 0;
+            position: relative;
         }
 
         .gauge-circle {
-            transform: rotate(135deg);
+            transform: rotate(-135deg);
             transform-origin: 110px 110px;
+        }
+
+        #gauge-bar {
             transition: stroke-dasharray 0.8s ease;
+        }
+
+        .compact-card {
+            flex-shrink: 0;
+        }
+
+        .guide-card {
+            position: relative;
+        }
+
+        .guide-card[open] {
+            z-index: 50;
+        }
+
+        .guide-card .guide-content {
+            display: none;
+        }
+
+        .guide-card[open] .guide-content {
+            display: block;
+            position: absolute;
+            top: calc(100% + 5px);
+            right: 0;
+            left: 0;
+            z-index: 100;
+            padding: 12px;
+            border: 1px solid #FCD34D;
+            border-radius: 12px;
+            background: #FFFBEB;
+            box-shadow: 0 8px 22px rgba(15, 23, 42, 0.18);
+            font-size: 12px;
+            line-height: 1.9;
+        }
+
+        .guide-card summary {
+            font-size: 13px;
+            min-height: 24px;
+        }
+
+        .safety-card {
+            padding: 11px 12px;
+        }
+
+        .safety-list {
+            font-size: 12px;
+            line-height: 1.8;
+        }
+
+        .gps-button {
+            min-height: 44px;
+            font-size: 13px;
+        }
+
+        .emergency-card {
+            padding: 9px 10px;
+        }
+
+        .footer {
+            flex-shrink: 0;
+            font-size: 10px;
+            text-align: center;
+            color: #64748B;
+            padding-top: 2px;
+            line-height: 1.5;
         }
 
         .btn-refresh:active svg {
@@ -62,109 +158,145 @@
             to { transform: rotate(360deg); }
         }
 
-        .gauge-section {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            flex: 1;
-            min-height: 0;
+        @media (min-width: 500px) {
+            .app {
+                box-shadow: 0 0 30px rgba(15, 23, 42, 0.08);
+            }
         }
 
-        .gauge-wrap {
-            width: min(45vh, 190px, 48vw);
-            height: min(45vh, 190px, 48vw);
-            flex-shrink: 1;
-            min-height: 145px;
-            min-width: 145px;
-            position: relative;
-        }
+        @media (max-height: 760px) {
+            .app {
+                padding-top: 8px;
+                padding-bottom: 6px;
+            }
 
-        .compact-card {
-            flex-shrink: 0;
-        }
+            .app-content {
+                gap: 5px;
+            }
 
-        .safety-list {
-            font-size: 10px;
-            line-height: 1.65;
-        }
+            .gauge-wrap {
+                width: min(54vw, 220px, 30vh);
+                height: min(54vw, 220px, 30vh);
+                min-width: 180px;
+                min-height: 180px;
+            }
 
-        .footer {
-            flex-shrink: 0;
-            font-size: 9px;
-            text-align: center;
-            color: #64748B;
-            padding-top: 2px;
+            .safety-card {
+                padding: 8px 10px;
+            }
+
+            .emergency-card {
+                padding: 7px 9px;
+            }
+
+            .gps-button {
+                min-height: 40px;
+            }
         }
 
         @media (max-height: 650px) {
             .app {
-                padding-top: 6px;
-                padding-bottom: 6px;
+                padding: 6px 12px;
             }
 
             .app-content {
                 gap: 3px;
             }
 
+            .header-title {
+                font-size: 14px;
+            }
+
             .gauge-wrap {
-                width: min(34vh, 155px, 42vw);
-                height: min(34vh, 155px, 42vw);
-                min-height: 125px;
-                min-width: 125px;
+                width: 180px;
+                height: 180px;
+                min-width: 180px;
+                min-height: 180px;
             }
 
             .guide-card {
-                padding: 5px 8px;
-                margin-top: 2px;
-                margin-bottom: 2px;
+                padding: 5px 9px;
+            }
+
+            .guide-card summary {
+                font-size: 12px;
             }
 
             .safety-card {
-                padding: 7px 10px;
-                margin-top: 2px;
-                margin-bottom: 2px;
+                padding: 6px 9px;
             }
 
-            .emergency-card {
-                padding: 6px 8px;
-                margin-top: 2px;
+            .safety-list {
+                font-size: 11px;
+                line-height: 1.55;
             }
 
             .gps-button {
-                padding-top: 7px;
-                padding-bottom: 7px;
+                min-height: 36px;
+                padding-top: 5px;
+                padding-bottom: 5px;
+                font-size: 12px;
+            }
+
+            .emergency-card {
+                padding: 5px 8px;
+            }
+
+            .footer {
+                font-size: 9px;
             }
         }
 
-        @media (max-height: 570px) {
-            .gauge-wrap {
-                width: 125px;
-                height: 125px;
-                min-width: 125px;
-                min-height: 125px;
+        @media (max-height: 560px) {
+            .app {
+                padding-top: 4px;
+                padding-bottom: 4px;
             }
 
-            .gauge-section {
-                flex: 0 1 auto;
+            .app-content {
+                gap: 2px;
             }
 
             .header-title {
                 font-size: 13px;
             }
 
-            .guide-card .guide-content {
-                display: none;
+            .gauge-wrap {
+                width: 155px;
+                height: 155px;
+                min-width: 155px;
+                min-height: 155px;
+            }
+
+            .gauge-section {
+                flex: 1 1 auto;
+            }
+
+            .safety-card {
+                padding: 4px 8px;
+            }
+
+            .safety-list {
+                font-size: 10px;
+                line-height: 1.45;
+            }
+
+            .emergency-card {
+                padding: 4px 7px;
+            }
+
+            .gps-button {
+                min-height: 33px;
+                font-size: 11px;
             }
         }
     </style>
 </head>
 
-<body class="bg-slate-900 text-slate-800 antialiased">
+<body class="text-slate-800 antialiased">
 
 <div class="app">
 
-    <!-- پس‌زمینه کوهستان -->
     <div class="absolute top-12 inset-x-0 h-48 pointer-events-none opacity-35 z-0">
         <svg viewBox="0 0 500 240" class="w-full h-full" preserveAspectRatio="none" aria-hidden="true">
             <path d="M0 150 L110 70 L240 160 L370 85 L500 170 L500 240 L0 240 Z" fill="#CBD5E1" opacity="0.5"/>
@@ -181,35 +313,35 @@
                 id="refresh-button"
                 type="button"
                 onclick="loadData()"
-                class="btn-refresh p-2 text-slate-700 bg-white/85 rounded-xl shadow-sm"
+                class="btn-refresh p-2 text-slate-700 bg-white/90 rounded-xl shadow-sm"
                 title="به‌روزرسانی داده‌ها"
                 aria-label="به‌روزرسانی داده‌ها"
             >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                 </svg>
             </button>
 
             <div class="text-center flex-1 mx-2">
-                <h1 class="header-title text-sm font-black text-slate-800">
+                <h1 class="header-title font-black text-slate-800">
                     سامانه هوشمند هشدار خطر حریق
                 </h1>
-                <div class="text-[10px] font-bold text-rose-600 mt-0.5">
+                <div class="text-xs font-bold text-rose-600 mt-0.5">
                     کوهستان دراک شیراز
                 </div>
             </div>
 
-            <div class="w-9" aria-hidden="true"></div>
+            <div class="w-10" aria-hidden="true"></div>
         </header>
 
-        <!-- راهنمای سامانه -->
-        <details class="guide-card compact-card relative z-10 bg-amber-50/95 border border-amber-200 rounded-xl p-2 text-xs">
+        <!-- راهنمای استفاده -->
+        <details class="guide-card compact-card relative z-10 bg-amber-50/95 border border-amber-200 rounded-xl p-2">
             <summary class="font-bold text-amber-900 cursor-pointer flex justify-between items-center">
                 <span>📖 راهنمای استفاده از سامانه</span>
                 <span class="text-amber-700">▾</span>
             </summary>
 
-            <div class="guide-content mt-2 text-[10px] text-amber-900 leading-relaxed space-y-1 border-t border-amber-200 pt-2">
+            <div class="guide-content text-amber-900 space-y-1">
                 <p>• رنگ سبز نشان‌دهنده خطر کمتر و بنفش نشان‌دهنده خطر بسیار شدید است.</p>
                 <p>• مقدار و سطح خطر بر اساس داده‌های موجود در فایل سامانه نمایش داده می‌شود.</p>
                 <p>• برای دریافت موقعیت مکانی، دکمه GPS را انتخاب کنید.</p>
@@ -217,7 +349,7 @@
             </div>
         </details>
 
-        <!-- گیج -->
+        <!-- گیج سطح خطر -->
         <section class="gauge-section relative z-10" aria-label="ارزیابی خطر حریق">
 
             <div class="gauge-wrap">
@@ -225,7 +357,13 @@
                 <svg class="w-full h-full" viewBox="0 0 220 220" role="img" aria-label="گیج سطح خطر حریق">
 
                     <defs>
-                        <linearGradient id="gaugeGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+                        <linearGradient
+                            id="gaugeGradient"
+                            x1="0%"
+                            y1="100%"
+                            x2="100%"
+                            y2="100%"
+                        >
                             <stop offset="0%" stop-color="#22C55E"/>
                             <stop offset="25%" stop-color="#EAB308"/>
                             <stop offset="50%" stop-color="#F97316"/>
@@ -234,7 +372,7 @@
                         </linearGradient>
                     </defs>
 
-                    <!-- زمینه خاکستری -->
+                    <!-- زمینه قوس -->
                     <circle
                         cx="110"
                         cy="110"
@@ -243,11 +381,9 @@
                         stroke="#E2E8F0"
                         stroke-width="15"
                         stroke-linecap="round"
-                        stroke-dasharray="414.69 138.23"
-                        class="gauge-circle"
                     />
 
-                    <!-- طیف رنگی ثابت؛ بنفش همیشه قابل مشاهده است -->
+                    <!-- طیف رنگی کامل و واضح -->
                     <circle
                         cx="110"
                         cy="110"
@@ -255,13 +391,12 @@
                         fill="none"
                         stroke="url(#gaugeGradient)"
                         stroke-width="15"
-                        stroke-linecap="round"
+                        stroke-linecap="butt"
                         stroke-dasharray="414.69 138.23"
-                        opacity="0.45"
                         class="gauge-circle"
                     />
 
-                    <!-- مقدار فعلی خطر -->
+                    <!-- میزان فعلی خطر -->
                     <circle
                         id="gauge-bar"
                         cx="110"
@@ -280,44 +415,44 @@
                 <div class="absolute inset-0 flex flex-col items-center justify-center text-center pt-2">
 
                     <div class="text-rose-500 mb-1">
-                        <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+                        <svg class="w-8 h-8 fill-current" viewBox="0 0 24 24" aria-hidden="true">
                             <path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.61 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z"/>
                         </svg>
                     </div>
 
-                    <span class="text-[10px] font-bold text-slate-500 mb-1">
+                    <span class="text-xs font-bold text-slate-500 mb-2">
                         سطح ارزیابی خطر
                     </span>
 
                     <div
                         id="risk-pill"
-                        class="px-4 py-1 rounded-full text-white text-xs font-black shadow-md bg-slate-500 transition-colors"
+                        class="px-5 py-1.5 rounded-full text-white text-sm font-black shadow-md bg-slate-500 transition-colors"
                         aria-live="polite"
                     >
                         در حال ارزیابی...
                     </div>
 
-                    <div id="risk-value" class="text-[10px] text-slate-600 font-bold mt-1"></div>
+                    <div id="risk-value" class="text-sm text-slate-700 font-extrabold mt-2"></div>
                 </div>
             </div>
 
-            <div id="update-badge" class="text-[10px] text-slate-600 font-bold mt-1 text-center">
+            <div id="update-badge" class="text-xs text-slate-600 font-bold mt-2 text-center">
                 آخرین به‌روزرسانی داده‌ها: در انتظار دریافت
             </div>
 
-            <div id="data-status" class="text-[9px] text-slate-500 text-center mt-0.5" aria-live="polite"></div>
+            <div id="data-status" class="text-[10px] text-slate-500 text-center mt-1" aria-live="polite"></div>
         </section>
 
         <!-- توصیه‌های ایمنی -->
-        <section class="safety-card compact-card relative z-10 bg-rose-50/90 border border-rose-100 rounded-xl p-2.5">
-            <div class="flex items-center gap-1.5 mb-1">
-                <span class="w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center text-xs font-black">!</span>
-                <h2 class="text-[11px] font-extrabold text-slate-800">
+        <section class="safety-card compact-card relative z-10 bg-rose-50/95 border border-rose-200 rounded-xl">
+            <div class="flex items-center gap-2 mb-1.5">
+                <span class="w-6 h-6 rounded-full bg-rose-500 text-white flex items-center justify-center text-sm font-black">!</span>
+                <h2 class="text-sm font-extrabold text-slate-800">
                     توصیه‌های ایمنی
                 </h2>
             </div>
 
-            <ul id="safety-tips" class="safety-list space-y-0.5 text-slate-700 font-medium list-disc list-inside">
+            <ul id="safety-tips" class="safety-list space-y-1 text-slate-700 font-medium list-disc list-inside">
                 <li>در حال دریافت اطلاعات...</li>
             </ul>
         </section>
@@ -328,38 +463,38 @@
                 id="gps-button"
                 type="button"
                 onclick="getGPS()"
-                class="gps-button w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-3 rounded-xl font-bold text-[11px] flex items-center justify-center gap-2 shadow-md active:scale-95"
+                class="gps-button w-full bg-emerald-600 hover:bg-emerald-700 text-white px-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-md active:scale-95"
             >
                 <span>📍</span>
                 <span>ثبت موقعیت GPS و دریافت لینک ارسال</span>
             </button>
 
-            <div id="gps-status" class="text-center text-[9px] text-slate-600 font-medium mt-1 min-h-[14px]" aria-live="polite"></div>
+            <div id="gps-status" class="text-center text-[10px] text-slate-600 font-medium mt-1 min-h-[14px]" aria-live="polite"></div>
         </section>
 
         <!-- تماس‌های اضطراری -->
-        <section class="emergency-card compact-card relative z-10 bg-rose-50/70 border border-rose-100 rounded-xl p-2">
-            <div class="flex items-center justify-center gap-1 text-[10px] font-extrabold text-slate-800 mb-1">
+        <section class="emergency-card compact-card relative z-10 bg-rose-50/90 border border-rose-200 rounded-xl">
+            <div class="flex items-center justify-center gap-2 text-xs font-extrabold text-slate-800 mb-1.5">
                 <span class="text-rose-500">📞</span>
                 <span>تماس‌های اضطراری حریق</span>
             </div>
 
-            <div class="grid grid-cols-2 gap-2 bg-white rounded-lg p-1.5 border border-rose-100">
+            <div class="grid grid-cols-2 gap-2 bg-white rounded-lg p-2 border border-rose-100">
 
-                <a href="tel:137" class="flex flex-col items-center justify-center py-0.5 border-l border-slate-100">
-                    <div class="flex items-center gap-1 text-amber-600 font-black text-sm">
+                <a href="tel:137" class="flex flex-col items-center justify-center py-1 border-l border-slate-100">
+                    <div class="flex items-center gap-1 text-amber-600 font-black text-base">
                         <span>📞</span>
                         <span>۱۳۷</span>
                     </div>
-                    <span class="text-[9px] text-slate-500 font-bold">شهرداری شیراز</span>
+                    <span class="text-[10px] text-slate-500 font-bold">شهرداری شیراز</span>
                 </a>
 
-                <a href="tel:125" class="flex flex-col items-center justify-center py-0.5">
-                    <div class="flex items-center gap-1 text-rose-600 font-black text-sm">
+                <a href="tel:125" class="flex flex-col items-center justify-center py-1">
+                    <div class="flex items-center gap-1 text-rose-600 font-black text-base">
                         <span>🚒</span>
                         <span>۱۲۵</span>
                     </div>
-                    <span class="text-[9px] text-slate-500 font-bold">آتش‌نشانی</span>
+                    <span class="text-[10px] text-slate-500 font-bold">آتش‌نشانی</span>
                 </a>
 
             </div>
@@ -578,7 +713,7 @@
 
             status.textContent = 'اطلاعات با موفقیت دریافت شد.';
             status.className =
-                'text-center text-[9px] text-emerald-700 mt-1';
+                'text-center text-[10px] text-emerald-700 mt-1';
 
         } catch (error) {
             console.error('خطا در دریافت داده:', error);
@@ -610,7 +745,7 @@
             status.textContent =
                 'دریافت اطلاعات ناموفق بود؛ مسیر فایل داده را بررسی کنید.';
             status.className =
-                'text-center text-[9px] text-rose-700 mt-1';
+                'text-center text-[10px] text-rose-700 mt-1';
 
         } finally {
             refreshButton.disabled = false;
@@ -651,7 +786,7 @@
                 const copy = document.createElement('button');
                 copy.type = 'button';
                 copy.className =
-                    'bg-slate-200 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold';
+                    'bg-slate-200 text-slate-700 px-2 py-1 rounded text-[11px] font-bold';
                 copy.textContent = 'کپی لینک';
                 copy.addEventListener('click', () => copyToClipboard(mapLink));
 
@@ -667,7 +802,7 @@
                             url: mapLink
                         });
                     } catch (_) {
-                        // لغو پنجره اشتراک‌گذاری نیازی به پیام خطا ندارد.
+                        // لغو پنجره اشتراک‌گذاری خطا محسوب نمی‌شود.
                     }
                 }
             },
