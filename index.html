@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Vazirmatn', sans-serif; -webkit-tap-highlight-color: transparent; }
-        .gauge-circle { transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1); transform: rotate(-90deg); transform-origin: 50% 50%; }
+        .gauge-path { transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1); transform: rotate(-90deg); transform-origin: 50% 50%; }
         @keyframes spin-once {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
@@ -20,15 +20,14 @@
 </head>
 <body class="bg-slate-900 flex justify-center items-center min-h-screen text-slate-800 antialiased selection:bg-rose-200">
 
-    <!-- کانتینر اصلی موبایل با اندازه دقیق یک صفحه بدون اسکرول -->
-    <div class="w-full max-w-md h-screen max-h-[100dvh] bg-gradient-to-b from-[#F8FAFC] via-[#EEF4F9] to-[#FFF5F5] flex flex-col justify-between shadow-2xl relative overflow-hidden p-4">
+    <!-- کانتینر اصلی موبایل بدون اسکرول -->
+    <div class="w-full max-w-md h-screen max-h-[100dvh] bg-gradient-to-b from-[#F8FAFC] via-[#EEF4F9] to-[#FFF5F5] flex flex-col justify-between shadow-2xl relative overflow-hidden p-3.5">
         
         <!-- پس‌زمینه کوهستان مه‌آلود -->
-        <div class="absolute top-16 inset-x-0 h-64 pointer-events-none opacity-35 z-0">
+        <div class="absolute top-14 inset-x-0 h-60 pointer-events-none opacity-30 z-0">
             <svg viewBox="0 0 500 240" class="w-full h-full object-cover" preserveAspectRatio="none">
                 <path d="M0 150 L110 70 L240 160 L370 85 L500 170 L500 240 L0 240 Z" fill="#CBD5E1" opacity="0.5"/>
                 <path d="M0 180 L90 120 L210 190 L340 125 L460 200 L500 180 L500 240 L0 240 Z" fill="#94A3B8" opacity="0.4"/>
-                <path d="M0 220 L15 195 L35 225 L60 190 L85 220 L120 185 L155 225 L190 180 L230 225 L270 190 L310 225 L350 185 L390 225 L430 190 L470 225 L500 200 L500 240 L0 240 Z" fill="#64748B" opacity="0.3"/>
             </svg>
         </div>
 
@@ -37,7 +36,7 @@
             
             <!-- هدر سامانه با نماد رفرش -->
             <div class="flex items-center justify-between pt-1">
-                <button onclick="location.reload()" class="btn-refresh p-2 text-slate-600 hover:text-slate-900 bg-white/80 hover:bg-white rounded-xl shadow-xs transition active:scale-95" title="بروزرسانی داده‌ها">
+                <button onclick="location.reload()" class="btn-refresh p-2 text-slate-600 hover:text-slate-900 bg-white/90 hover:bg-white rounded-xl shadow-xs transition active:scale-95" title="بروزرسانی داده‌ها">
                     <svg class="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
@@ -48,11 +47,11 @@
                     <div class="text-[11px] font-semibold text-rose-600 mt-0.5">کوهستان دراک شیراز</div>
                 </div>
 
-                <div class="w-9"></div> <!-- بالانسر هدر به جای دکمه حذف شده -->
+                <div class="w-9"></div>
             </div>
 
-            <!-- منوی راهنمای سامانه و عملکرد بخش‌ها -->
-            <details class="bg-amber-50/95 backdrop-blur-md border border-amber-200/90 rounded-2xl p-2.5 text-right text-xs shadow-xs transition-all my-1">
+            <!-- منوی راهنمای سامانه -->
+            <details class="bg-amber-50/95 backdrop-blur-md border border-amber-200/90 rounded-2xl p-2 text-right text-xs shadow-xs transition-all my-0.5">
                 <summary class="font-bold text-amber-900 cursor-pointer flex justify-between items-center select-none">
                     <span class="flex items-center gap-1.5">
                         <span class="text-sm">📖</span>
@@ -60,57 +59,52 @@
                     </span>
                     <span class="text-amber-700 text-xs">▾</span>
                 </summary>
-                <div class="mt-2 text-[11px] text-amber-900 leading-relaxed space-y-1.5 pt-1 border-t border-amber-200/60 font-medium">
-                    <p>• <strong>پایش هوشمند:</strong> وضعیت روزانه حریق کوهستان دراک با الگوریتم‌های علمی هواشناسی و پوشش گیاهی محاسبه می‌شود.</p>
-                    <p>• <strong>طیف خطر گیج:</strong> از سبز (کم) تا بنفش (بحرانی) نشان‌دهنده حساسیت جنگل و بوته‌ها به شعله‌وری است.</p>
-                    <p>• <strong>دکمه موقعیت GPS:</strong> با زدن آن، مختصات دقیق محل حضور شما استخراج شده و لینک مستقیم ارسال به امدادگران یا مپ آماده می‌شود.</p>
-                    <p>• <strong>تماس اضطراری:</strong> با لمس شماره‌های ۱۲۵ (آتش‌نشانی) و ۱۳۷ (شهرداری) تماس فوری برقرار خواهد شد.</p>
+                <div class="mt-1.5 text-[11px] text-amber-900 leading-relaxed space-y-1 pt-1 border-t border-amber-200/60 font-medium">
+                    <p>• <strong>پایش هوشمند:</strong> وضعیت روزانه خطر حریق با مدل‌های علمی ارزیابی می‌شود.</p>
+                    <p>• <strong>گیج ۵ رنگ استاندارد:</strong> سبز (کم) ← زرد (متوسط) ← نارنجی (زیاد) ← قرمز (بسیار زیاد) ← بنفش (بحرانی).</p>
+                    <p>• <strong>موقعیت GPS:</strong> استخراج مختصات دقیق جهت ارسال لینک امدادرسانی.</p>
+                    <p>• <strong>تماس اضطراری:</strong> ارتباط مستقیم با آتش‌نشانی (۱۲۵) و شهرداری (۱۳۷).</p>
                 </div>
             </details>
 
-            <!-- گیج ارزیابی خطر با طیف ۵ رنگ -->
-            <div class="flex flex-col items-center justify-center my-auto py-1">
-                <div class="relative w-52 h-52 flex items-center justify-center">
+            <!-- گیج ارزیابی خطر با ۵ بخش رنگی استاندارد -->
+            <div class="flex flex-col items-center justify-center my-auto py-0.5">
+                <div class="relative w-48 h-48 flex items-center justify-center">
                     <svg class="w-full h-full" viewBox="0 0 220 220">
-                        <defs>
-                            <!-- طیف ۵ تایی: سبز -> زرد -> نارنجی -> قرمز -> بنفش -->
-                            <linearGradient id="gaugeGradient" x1="0%" y1="100%" x2="100%" y2="0%">
-                                <stop offset="0%" stop-color="#22C55E" />    <!-- سبز -->
-                                <stop offset="25%" stop-color="#EAB308" />   <!-- زرد -->
-                                <stop offset="50%" stop-color="#F97316" />   <!-- نارنجی -->
-                                <stop offset="75%" stop-color="#EF4444" />   <!-- قرمز -->
-                                <stop offset="100%" stop-color="#9333EA" />  <!-- بنفش بحرانی -->
-                            </linearGradient>
-                        </defs>
-                        <!-- حلقه پس‌زمینه خاکستری (کمان 270 درجه) -->
-                        <circle cx="110" cy="110" r="88" fill="none" stroke="#E2E8F0" stroke-width="15" stroke-linecap="round" stroke-dasharray="415 553" stroke-dashoffset="-69"/>
-                        <!-- میله پویای گیج -->
-                        <circle id="gauge-bar" class="gauge-circle" cx="110" cy="110" r="88" fill="none" stroke="url(#gaugeGradient)" stroke-width="15" stroke-linecap="round" stroke-dasharray="552.92" stroke-dashoffset="552.92"/>
+                        <!-- پس‌زمینه خاکستری کم‌رنگ کل حلقه -->
+                        <circle cx="110" cy="110" r="88" fill="none" stroke="#E2E8F0" stroke-width="14" stroke-linecap="round" stroke-dasharray="415 553" stroke-dashoffset="-69"/>
+                        
+                        <!-- ۵ بخش رنگی مستقل روی گیج (سبز، زرد، نارنجی، قرمز، بنفش) -->
+                        <circle cx="110" cy="110" r="88" fill="none" stroke="#22C55E" stroke-width="14" stroke-linecap="round" stroke-dasharray="110.5 442.4" stroke-dashoffset="-69" class="gauge-path"/>
+                        <circle cx="110" cy="110" r="88" fill="none" stroke="#EAB308" stroke-width="14" stroke-linecap="round" stroke-dasharray="110.5 442.4" stroke-dashoffset="-179.5" class="gauge-path"/>
+                        <circle cx="110" cy="110" r="88" fill="none" stroke="#F97316" stroke-width="14" stroke-linecap="round" stroke-dasharray="110.5 442.4" stroke-dashoffset="-290" class="gauge-path"/>
+                        <circle cx="110" cy="110" r="88" fill="none" stroke="#EF4444" stroke-width="14" stroke-linecap="round" stroke-dasharray="110.5 442.4" stroke-dashoffset="-400.5" class="gauge-path"/>
+                        <circle cx="110" cy="110" r="88" fill="none" stroke="#9333EA" stroke-width="14" stroke-linecap="round" stroke-dasharray="110.5 442.4" stroke-dashoffset="-511" class="gauge-path"/>
                     </svg>
 
                     <div class="absolute inset-0 flex flex-col items-center justify-center text-center pt-2">
-                        <div class="text-rose-500 mb-1 animate-pulse">
-                            <svg class="w-7 h-7 fill-current" viewBox="0 0 24 24">
+                        <div class="text-rose-500 mb-0.5 animate-pulse">
+                            <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24">
                                 <path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.61 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z"/>
                             </svg>
                         </div>
-                        <span class="text-[11px] font-bold text-slate-500 mb-1">سطح ارزیابی خطر</span>
-                        <div id="risk-pill" class="px-5 py-1.5 rounded-full text-white text-sm font-black shadow-md bg-purple-600 transition-all">
+                        <span class="text-[11px] font-bold text-slate-500 mb-0.5">سطح ارزیابی خطر</span>
+                        <div id="risk-pill" class="px-4 py-1 rounded-full text-white text-xs font-black shadow-md bg-purple-600 transition-all">
                             در حال ارزیابی...
                         </div>
                     </div>
                 </div>
 
-                <!-- تاریخ بدون ساعت با فونت فارسی -->
+                <!-- تاریخ بدون ساعت با ارقام فارسی -->
                 <div id="update-badge" class="text-[11px] text-slate-600 font-bold mt-1">
                     آخرین بروزرسانی داده‌ها: ۳ آبان ۱۴۰۵
                 </div>
             </div>
 
             <!-- بخش توصیه‌ها -->
-            <div class="bg-rose-50/85 backdrop-blur-sm border border-rose-100 rounded-2xl p-3 my-1 shadow-2xs">
-                <div class="flex items-center gap-1.5 mb-1.5">
-                    <span class="w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center text-xs font-black">!</span>
+            <div class="bg-rose-50/85 backdrop-blur-sm border border-rose-100 rounded-2xl p-2.5 my-0.5 shadow-2xs">
+                <div class="flex items-center gap-1.5 mb-1">
+                    <span class="w-4.5 h-4.5 rounded-full bg-rose-500 text-white flex items-center justify-center text-[10px] font-black">!</span>
                     <h3 class="text-xs font-extrabold text-slate-800">توصیه‌های ایمنی متناسب با شرایط</h3>
                 </div>
                 <ul id="safety-tips" class="space-y-1 text-[11px] leading-relaxed text-slate-700 font-medium list-disc list-inside">
@@ -118,31 +112,31 @@
                 </ul>
             </div>
 
-            <!-- دکمه موقعیت GPS و تهیه لینک ارسال -->
-            <div class="my-1">
-                <button onclick="getGPS()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 px-3 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition shadow-md active:scale-98">
-                    <span class="text-base">📍</span>
+            <!-- دکمه موقعیت GPS -->
+            <div class="my-0.5">
+                <button onclick="getGPS()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-3 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition shadow-md active:scale-98">
+                    <span class="text-sm">📍</span>
                     <span>ثبت موقعیت GPS و دریافت لینک ارسال</span>
                 </button>
-                <div id="gps-status" class="text-center text-[10px] text-slate-600 font-medium mt-1 min-h-[16px]"></div>
+                <div id="gps-status" class="text-center text-[10px] text-slate-600 font-medium mt-0.5 min-h-[14px]"></div>
             </div>
 
-            <!-- شماره‌های تماس اضطراری فقط ۱۲۵ و ۱۳۷ -->
-            <div class="bg-rose-50/60 border border-rose-100 rounded-2xl p-2.5 mt-1 shadow-2xs">
-                <div class="flex items-center justify-center gap-1 text-[11px] font-extrabold text-slate-800 mb-1.5">
+            <!-- شماره‌های تماس اضطراری ۱۲۵ و ۱۳۷ -->
+            <div class="bg-rose-50/60 border border-rose-100 rounded-2xl p-2 mt-0.5 shadow-2xs">
+                <div class="flex items-center justify-center gap-1 text-[11px] font-extrabold text-slate-800 mb-1">
                     <span class="text-rose-500">📞</span>
                     <span>تماس‌های اضطراری حریق</span>
                 </div>
                 <div class="grid grid-cols-2 gap-2 bg-white rounded-xl p-2 shadow-xs border border-rose-100/70">
                     <a href="tel:137" class="flex flex-col items-center justify-center py-1 border-l border-slate-100 hover:opacity-85 transition active:scale-95">
-                        <div class="flex items-center gap-1 text-amber-600 font-black text-sm">
+                        <div class="flex items-center gap-1 text-amber-600 font-black text-xs">
                             <span>📞</span>
                             <span>۱۳۷</span>
                         </div>
                         <span class="text-[10px] text-slate-500 font-bold mt-0.5">شهرداری شیراز</span>
                     </a>
                     <a href="tel:125" class="flex flex-col items-center justify-center py-1 hover:opacity-85 transition active:scale-95">
-                        <div class="flex items-center gap-1 text-rose-600 font-black text-sm">
+                        <div class="flex items-center gap-1 text-rose-600 font-black text-xs">
                             <span>🚒</span>
                             <span>۱۲۵</span>
                         </div>
@@ -155,7 +149,6 @@
     </div>
 
     <script>
-        // تبدیل ارقام لاتین به فارسی
         function toPersianDigits(str) {
             if (!str) return '';
             const farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
@@ -164,17 +157,15 @@
             });
         }
 
-        // تمیزکردن تاریخ و حذف ساعت
         function cleanPersianDate(dateStr) {
             if (!dateStr) return '۳ آبان ۱۴۰۵';
-            let pure = dateStr.split('-')[0].trim(); // حذف بخش ساعت بعد از خط تیره
+            let pure = dateStr.split('-')[0].trim();
             return toPersianDigits(pure);
         }
 
         async function loadFWI() {
             const pillEl = document.getElementById('risk-pill');
             const updateEl = document.getElementById('update-badge');
-            const circleEl = document.getElementById('gauge-bar');
             const tipsEl = document.getElementById('safety-tips');
 
             try {
@@ -185,37 +176,28 @@
                 const val = (typeof data.fwi === 'number') ? data.fwi : parseFloat(data.fwi);
                 const displayVal = isNaN(val) ? 0 : val;
 
-                // سطح خطر و رنگ
                 const riskFa = data.risk_level_fa || 'بحرانی';
                 pillEl.innerText = riskFa;
                 pillEl.style.backgroundColor = data.risk_color || '#9333EA';
 
-                // زاویه پر شدن گیج (کمان حداکثر تا 75 درصد حلقه)
-                const maxVal = 60;
-                const ratio = Math.min(1, Math.max(0, displayVal / maxVal));
-                const circumference = 2 * Math.PI * 88;
-                circleEl.style.strokeDashoffset = circumference - (ratio * (circumference * 0.75));
-
-                // تاریخ فارسی بدون ساعت
                 const rawDate = data.updated_at || data.forecast_shamsi || '1405/08/03';
                 updateEl.innerText = 'آخرین بروزرسانی داده‌ها: ' + cleanPersianDate(rawDate);
 
-                // پیام‌ها متناسب با خطر
                 if (displayVal >= 50) {
                     tipsEl.innerHTML = `
                         <li class="font-bold text-rose-800">وضعیت فوق‌العاده بحرانی؛ از هرگونه ورود به ارتفاعات دراک پرهیز کنید.</li>
-                        <li>پوشش مرتعی شدیداً خشک و مستعد آتش‌سوزی انفجاری است.</li>
-                        <li>در صورت رویت هرگونه دود مشکوک با ۱۲۵ تماس بگیرید.</li>
+                        <li>پوشش مرتعی شدیداً خشک و مستعد آتش‌سوزی است.</li>
+                        <li>در صورت رویت دود با ۱۲۵ تماس بگیرید.</li>
                     `;
                 } else if (displayVal >= 30) {
                     tipsEl.innerHTML = `
-                        <li class="font-bold text-amber-800">خطر بالا: برپایی هر نوع آتش یا پیک‌نیک در ارتفاعات ممنوع است.</li>
-                        <li>پرتاب ته‌سیگار یا اشیای شیشه‌ای می‌تواند فوراً موجب آتش‌سوزی شود.</li>
+                        <li class="font-bold text-amber-800">خطر بالا: برپایی هر نوع آتش در ارتفاعات ممنوع است.</li>
+                        <li>پرتاب ته‌سیگار یا اشیای شیشه‌ای موجب حریق می‌شود.</li>
                     `;
                 } else {
                     tipsEl.innerHTML = `
-                        <li>از برافروختن آتش در مجاورت بوته‌ها و علف‌های خشک خودداری فرمایید.</li>
-                        <li>قبل از ترک محل، از خاموش بودن کامل خاکستر مطمئن شوید.</li>
+                        <li>از برافروختن آتش در مجاورت بوته‌ها خودداری فرمایید.</li>
+                        <li>قبل از ترک محل، از خاموش بودن آتش مطمئن شوید.</li>
                     `;
                 }
 
@@ -225,28 +207,27 @@
                 pillEl.style.backgroundColor = '#9333EA';
                 updateEl.innerText = 'آخرین بروزرسانی داده‌ها: ' + toPersianDigits('۱۴۰۵/۰۸/۰۳');
                 tipsEl.innerHTML = `
-                    <li class="font-bold text-rose-800">وضعیت بحرانی است؛ از ورود به ارتفاعات کوهستان دراک جداً خودداری کنید.</li>
-                    <li>در صورت بروز هرگونه حریق، فوراً به شماره‌های ۱۲۵ یا ۱۳۷ گزارش دهید.</li>
+                    <li class="font-bold text-rose-800">وضعیت بحرانی است؛ از ورود به ارتفاعات دراک جداً خودداری کنید.</li>
+                    <li>در صورت بروز حریق، فوراً به ۱۲۵ گزارش دهید.</li>
                 `;
             }
         }
 
-        // ثبت موقعیت GPS و تهیه لینک اشتراک‌گذاری
         function getGPS() {
             const status = document.getElementById('gps-status');
             if (!navigator.geolocation) {
-                status.innerText = "مرورگر شما از قابلیت مکان‌یابی پشتیبانی نمی‌کند.";
+                status.innerText = "مرورگر شما از مکان‌یابی پشتیبانی نمی‌کند.";
                 return;
             }
-            status.innerText = "در حال دریافت دقیق مختصات شما...";
+            status.innerText = "در حال دریافت مختصات دقیق شما...";
             navigator.geolocation.getCurrentPosition((pos) => {
                 const lat = pos.coords.latitude.toFixed(6);
                 const lon = pos.coords.longitude.toFixed(6);
                 const mapLink = `https://maps.google.com/?q=${lat},${lon}`;
                 
                 status.innerHTML = `
-                    <div class="flex items-center justify-center gap-2 mt-1">
-                        <a href="${mapLink}" target="_blank" class="text-blue-600 underline font-bold">نمایش موقعیت روی نقشه</a>
+                    <div class="flex items-center justify-center gap-2">
+                        <a href="${mapLink}" target="_blank" class="text-blue-600 underline font-bold">نمایش روی نقشه</a>
                         <button onclick="copyToClipboard('${mapLink}')" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold">کپی لینک</button>
                     </div>
                 `;
@@ -259,13 +240,13 @@
                     }).catch(() => {});
                 }
             }, () => {
-                status.innerText = "دسترسی به GPS مسدود است. لطفاً لوکیشن دستگاه را روشن فرمایید.";
+                status.innerText = "دسترسی GPS مسدود است. لوکیشن دستگاه را فعال کنید.";
             }, { enableHighAccuracy: true });
         }
 
         function copyToClipboard(text) {
             navigator.clipboard.writeText(text).then(() => {
-                alert('لینک موقعیت مکانی شما با موفقیت کپی شد.');
+                alert('لینک موقعیت مکانی کپی شد.');
             });
         }
 
