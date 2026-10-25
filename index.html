@@ -68,19 +68,69 @@
         }
 
         .gauge-wrap {
-            width: min(62vw, 250px, 32vh);
-            height: min(62vw, 250px, 32vh);
-            min-width: 190px;
-            min-height: 190px;
+            width: min(62vw, 240px, 31vh);
+            height: min(62vw, 240px, 31vh);
+            min-width: 185px;
+            min-height: 185px;
             flex-shrink: 0;
             position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        #gauge-bar {
+        /* حلقه گرادینت مخروطی پیوسته: شروع سبز از ۱۲، زرد ساعت ۳، نارنجی ساعت ۶، قرمز ساعت ۹، بنفش ساعت ۱۲ */
+        .gauge-conic-ring {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(
+                from 0deg at 50% 50%,
+                #22C55E 0%,
+                #84CC16 18%,
+                #EAB308 36%,
+                #F97316 58%,
+                #EF4444 80%,
+                #9333EA 100%
+            );
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+        }
+
+        /* لایه پوشش خاکستری برای قسمت‌های پر نشده گیج */
+        .gauge-mask-svg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg); /* شروع انیمیشن مقدار از ساعت ۱۲ */
+            pointer-events: none;
+        }
+
+        #gauge-progress-circle {
             fill: none;
-            stroke-width: 20;
-            stroke-linecap: butt;
-            transition: stroke-dasharray 0.8s ease;
+            stroke: #E2E8F0;
+            stroke-width: 22;
+            transition: stroke-dashoffset 0.8s ease;
+        }
+
+        /* مرکز سفید دایره */
+        .gauge-center-hole {
+            width: calc(100% - 44px);
+            height: calc(100% - 44px);
+            background: #FFFFFF;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            z-index: 10;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.04);
+            padding: 8px;
         }
 
         .compact-card {
@@ -173,10 +223,10 @@
             }
 
             .gauge-wrap {
-                width: min(54vw, 220px, 30vh);
-                height: min(54vw, 220px, 30vh);
-                min-width: 180px;
-                min-height: 180px;
+                width: min(54vw, 215px, 29vh);
+                height: min(54vw, 215px, 29vh);
+                min-width: 175px;
+                min-height: 175px;
             }
 
             .safety-card {
@@ -206,10 +256,10 @@
             }
 
             .gauge-wrap {
-                width: 180px;
-                height: 180px;
-                min-width: 180px;
-                min-height: 180px;
+                width: 175px;
+                height: 175px;
+                min-width: 175px;
+                min-height: 175px;
             }
 
             .guide-card {
@@ -260,10 +310,10 @@
             }
 
             .gauge-wrap {
-                width: 155px;
-                height: 155px;
-                min-width: 155px;
-                min-height: 155px;
+                width: 150px;
+                height: 150px;
+                min-width: 150px;
+                min-height: 150px;
             }
 
             .safety-card {
@@ -337,81 +387,56 @@
             </summary>
 
             <div class="guide-content text-amber-900 space-y-1">
-                <p>• شروع گیج از ساعت ۱۲ با رنگ سبز (کم‌خطر) آغاز شده و در جهت عقربه‌های ساعت به زرد، نارنجی، قرمز و در نهایت بنفش (بحرانی) می‌رسد.</p>
+                <p>• شروع گیج از ساعت ۱۲ با رنگ سبز (کم‌خطر) آغاز شده و به‌صورت ساعت‌گرد به زرد، نارنجی، قرمز و در انتها (مجدداً ساعت ۱۲) به بنفش (بحرانی) می‌رسد.</p>
                 <p>• مقدار و سطح خطر بر اساس پردازش هوشمند شاخص‌های اقلیمی دراک نمایش داده می‌شود.</p>
                 <p>• با فشردن دکمه GPS، موقعیت و لینک مکان دقیق شما استخراج می‌شود.</p>
                 <p>• در شرایط بحرانی از ورود به ارتفاعات دراک جداً خودداری کنید.</p>
             </div>
         </details>
 
-        <!-- گیج -->
+        <!-- گیج با گرادینت دایره‌ای واقعی ۳۶۰ درجه -->
         <section class="gauge-section relative z-10" aria-label="ارزیابی خطر حریق">
 
             <div class="gauge-wrap">
+                <!-- حلقه رنگی پیوسته ۳۶۰ درجه (سبز و بنفش در ساعت ۱۲ به هم می‌رسند) -->
+                <div class="gauge-conic-ring">
+                    
+                    <!-- پوشاننده بخش خالی متناسب با مقدار شاخص -->
+                    <svg class="gauge-mask-svg" viewBox="0 0 200 200">
+                        <circle
+                            id="gauge-progress-circle"
+                            cx="100"
+                            cy="100"
+                            r="89"
+                            stroke-dasharray="559.2"
+                            stroke-dashoffset="0"
+                        />
+                    </svg>
 
-                <svg class="w-full h-full" viewBox="0 0 220 220" role="img" aria-label="گیج سطح خطر حریق">
-
-                    <!-- گرادینت دایره‌ای با چرخش ۹۰ درجه برای شروع دقیق سبز از ساعت ۱۲ به صورت ساعت‌گرد -->
-                    <defs>
-                        <linearGradient id="gaugeGradient" x1="0%" y1="100%" x2="0%" y2="0%" gradientTransform="rotate(90 0.5 0.5)">
-                            <stop offset="0%" stop-color="#22C55E"/>
-                            <stop offset="25%" stop-color="#EAB308"/>
-                            <stop offset="50%" stop-color="#F97316"/>
-                            <stop offset="75%" stop-color="#EF4444"/>
-                            <stop offset="100%" stop-color="#9333EA"/>
-                        </linearGradient>
-                    </defs>
-
-                    <!-- زمینه خاکستری کم‌رنگ پشت گیج -->
-                    <circle
-                        cx="110"
-                        cy="110"
-                        r="85"
-                        fill="none"
-                        stroke="#E2E8F0"
-                        stroke-width="20"
-                    />
-
-                    <!-- نوار مقدار زنده (ساعت‌گرد از ساعت ۱۲) -->
-                    <circle
-                        id="gauge-bar"
-                        cx="110"
-                        cy="110"
-                        r="85"
-                        stroke="url(#gaugeGradient)"
-                        stroke-dasharray="0 534.07"
-                        transform="rotate(-90 110 110)"
-                    />
-
-                    <!-- مرکز گیج -->
-                    <foreignObject x="30" y="54" width="160" height="112">
-                        <div xmlns="http://www.w3.org/1999/xhtml" class="w-full h-full flex flex-col items-center justify-center text-center" style="font-family: Vazirmatn, sans-serif; padding-top: 8px;">
-
-                            <div style="color:#F43F5E; margin-bottom:4px;">
-                                <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                    <path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.61 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z"/>
-                                </svg>
-                            </div>
-
-                            <div style="font-size:12px; font-weight:700; color:#64748B; margin-bottom:6px;">
-                                سطح ارزیابی خطر
-                            </div>
-
-                            <div
-                                id="risk-pill"
-                                style="padding:5px 17px; border-radius:30px; color:white; font-size:13px; font-weight:900; background:#64748B; box-shadow:0 3px 8px rgba(15,23,42,.15);"
-                                aria-live="polite"
-                            >
-                                در حال ارزیابی...
-                            </div>
-
-                            <div id="risk-value" style="font-size:13px; color:#334155; font-weight:800; margin-top:7px;"></div>
-
+                    <!-- مرکز اطلاعات گیج -->
+                    <div class="gauge-center-hole">
+                        <div class="text-rose-500 mb-1">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.61 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z"/>
+                            </svg>
                         </div>
-                    </foreignObject>
 
-                </svg>
+                        <div class="text-[11px] font-bold text-slate-500 mb-1">
+                            سطح ارزیابی خطر
+                        </div>
 
+                        <div
+                            id="risk-pill"
+                            class="px-4 py-1 rounded-full text-white text-xs font-black bg-slate-500 shadow-sm transition-colors duration-500"
+                            aria-live="polite"
+                        >
+                            در حال ارزیابی...
+                        </div>
+
+                        <div id="risk-value" class="text-xs text-slate-700 font-extrabold mt-1.5"></div>
+                    </div>
+
+                </div>
             </div>
 
             <div id="update-badge" class="text-xs text-slate-600 font-bold mt-2 text-center">
@@ -486,8 +511,7 @@
 <script>
     const DATA_URL = './data/derak_fwi.json';
     const MAX_VALUE = 60;
-    const RADIUS = 85;
-    const CIRCUMFERENCE = 2 * Math.PI * RADIUS; // ~534.07
+    const CIRCUMFERENCE = 2 * Math.PI * 89; // 559.2
 
     function toPersianDigits(value) {
         return String(value ?? '').replace(/[0-9]/g, digit =>
@@ -586,13 +610,13 @@
     }
 
     function updateGauge(value) {
-        const gauge = document.getElementById('gauge-bar');
-
+        const maskCircle = document.getElementById('gauge-progress-circle');
         const ratio = Math.max(0, Math.min(1, value / MAX_VALUE));
-        const progress = ratio * CIRCUMFERENCE;
-        const remaining = CIRCUMFERENCE - progress;
-
-        gauge.style.strokeDasharray = `${progress} ${remaining}`;
+        
+        // وقتی مقدار حداکثر باشد (۶۰)، تمام دایره ۳۶۰ درجه رنگی دیده می‌شود
+        // و نقطه شروع (سبز) و نقطه پایان (بنفش) در ساعت ۱۲ مماس و کنار هم قرار می‌گیرند.
+        const offset = CIRCUMFERENCE * ratio;
+        maskCircle.style.strokeDashoffset = -offset;
     }
 
     function updateTips(value) {
@@ -692,8 +716,7 @@
 
             document.getElementById('risk-value').textContent = '';
 
-            document.getElementById('gauge-bar').style.strokeDasharray =
-                '0 ' + CIRCUMFERENCE;
+            document.getElementById('gauge-progress-circle').style.strokeDashoffset = '0';
 
             dateBadge.textContent =
                 'آخرین به‌روزرسانی داده‌ها: نامشخص';
@@ -766,7 +789,7 @@
                             url: mapLink
                         });
                     } catch (_) {
-                        // لغو پنجره اشتراک‌گذاری خطا محسوب نمی‌شود.
+                        // لغو پنجره اشتراک‌گذاری
                     }
                 }
             },
