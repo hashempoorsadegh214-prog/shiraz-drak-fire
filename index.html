@@ -76,12 +76,16 @@
             position: relative;
         }
 
-        .gauge-circle {
-            transform: rotate(-135deg);
-            transform-origin: 110px 110px;
+        .gauge-arc {
+            fill: none;
+            stroke-width: 15;
+            stroke-linecap: butt;
         }
 
         #gauge-bar {
+            fill: none;
+            stroke-width: 8;
+            stroke-linecap: round;
             transition: stroke-dasharray 0.8s ease;
         }
 
@@ -268,10 +272,6 @@
                 min-height: 155px;
             }
 
-            .gauge-section {
-                flex: 1 1 auto;
-            }
-
             .safety-card {
                 padding: 4px 8px;
             }
@@ -297,6 +297,7 @@
 
 <div class="app">
 
+    <!-- پس‌زمینه کوهستان -->
     <div class="absolute top-12 inset-x-0 h-48 pointer-events-none opacity-35 z-0">
         <svg viewBox="0 0 500 240" class="w-full h-full" preserveAspectRatio="none" aria-hidden="true">
             <path d="M0 150 L110 70 L240 160 L370 85 L500 170 L500 240 L0 240 Z" fill="#CBD5E1" opacity="0.5"/>
@@ -349,21 +350,77 @@
             </div>
         </details>
 
-        <!-- گیج سطح خطر -->
+        <!-- گیج -->
         <section class="gauge-section relative z-10" aria-label="ارزیابی خطر حریق">
 
             <div class="gauge-wrap">
 
                 <svg class="w-full h-full" viewBox="0 0 220 220" role="img" aria-label="گیج سطح خطر حریق">
 
+                    <!-- زمینه -->
+                    <circle
+                        cx="110"
+                        cy="110"
+                        r="88"
+                        fill="none"
+                        stroke="#E2E8F0"
+                        stroke-width="15"
+                    />
+
+                    <!--
+                        قوس 270 درجه:
+                        شروع: ساعت ۱۲
+                        جهت: ساعت‌گرد
+                        پایان: ساعت ۹
+                        هر رنگ یک پنجم قوس را می‌گیرد.
+                    -->
+                    <g transform="rotate(-135 110 110)">
+
+                        <circle
+                            class="gauge-arc"
+                            cx="110" cy="110" r="88"
+                            stroke="#22C55E"
+                            stroke-dasharray="82.94 469.98"
+                            stroke-dashoffset="0"
+                        />
+
+                        <circle
+                            class="gauge-arc"
+                            cx="110" cy="110" r="88"
+                            stroke="#EAB308"
+                            stroke-dasharray="82.94 469.98"
+                            stroke-dashoffset="-82.94"
+                        />
+
+                        <circle
+                            class="gauge-arc"
+                            cx="110" cy="110" r="88"
+                            stroke="#F97316"
+                            stroke-dasharray="82.94 469.98"
+                            stroke-dashoffset="-165.88"
+                        />
+
+                        <circle
+                            class="gauge-arc"
+                            cx="110" cy="110" r="88"
+                            stroke="#EF4444"
+                            stroke-dasharray="82.94 469.98"
+                            stroke-dashoffset="-248.82"
+                        />
+
+                        <circle
+                            class="gauge-arc"
+                            cx="110" cy="110" r="88"
+                            stroke="#9333EA"
+                            stroke-dasharray="82.94 469.98"
+                            stroke-dashoffset="-331.76"
+                        />
+
+                    </g>
+
+                    <!-- پوشش پیوسته رنگی روی قوس -->
                     <defs>
-                        <linearGradient
-                            id="gaugeGradient"
-                            x1="0%"
-                            y1="100%"
-                            x2="100%"
-                            y2="100%"
-                        >
+                        <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                             <stop offset="0%" stop-color="#22C55E"/>
                             <stop offset="25%" stop-color="#EAB308"/>
                             <stop offset="50%" stop-color="#F97316"/>
@@ -372,68 +429,46 @@
                         </linearGradient>
                     </defs>
 
-                    <!-- زمینه قوس -->
-                    <circle
-                        cx="110"
-                        cy="110"
-                        r="88"
-                        fill="none"
-                        stroke="#E2E8F0"
-                        stroke-width="15"
-                        stroke-linecap="round"
-                    />
-
-                    <!-- طیف رنگی کامل و واضح -->
-                    <circle
-                        cx="110"
-                        cy="110"
-                        r="88"
-                        fill="none"
-                        stroke="url(#gaugeGradient)"
-                        stroke-width="15"
-                        stroke-linecap="butt"
-                        stroke-dasharray="414.69 138.23"
-                        class="gauge-circle"
-                    />
-
-                    <!-- میزان فعلی خطر -->
+                    <!-- نوار پیشرفت مقدار فعلی -->
                     <circle
                         id="gauge-bar"
                         cx="110"
                         cy="110"
                         r="88"
-                        fill="none"
                         stroke="url(#gaugeGradient)"
-                        stroke-width="15"
-                        stroke-linecap="round"
                         stroke-dasharray="0 552.92"
-                        class="gauge-circle"
+                        transform="rotate(-135 110 110)"
                     />
+
+                    <!-- مرکز گیج -->
+                    <foreignObject x="30" y="54" width="160" height="112">
+                        <div xmlns="http://www.w3.org/1999/xhtml" class="w-full h-full flex flex-col items-center justify-center text-center" style="font-family: Vazirmatn, sans-serif; padding-top: 8px;">
+
+                            <div style="color:#F43F5E; margin-bottom:4px;">
+                                <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.61 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z"/>
+                                </svg>
+                            </div>
+
+                            <div style="font-size:12px; font-weight:700; color:#64748B; margin-bottom:6px;">
+                                سطح ارزیابی خطر
+                            </div>
+
+                            <div
+                                id="risk-pill"
+                                style="padding:5px 17px; border-radius:30px; color:white; font-size:13px; font-weight:900; background:#64748B; box-shadow:0 3px 8px rgba(15,23,42,.15);"
+                                aria-live="polite"
+                            >
+                                در حال ارزیابی...
+                            </div>
+
+                            <div id="risk-value" style="font-size:13px; color:#334155; font-weight:800; margin-top:7px;"></div>
+
+                        </div>
+                    </foreignObject>
 
                 </svg>
 
-                <div class="absolute inset-0 flex flex-col items-center justify-center text-center pt-2">
-
-                    <div class="text-rose-500 mb-1">
-                        <svg class="w-8 h-8 fill-current" viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.61 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z"/>
-                        </svg>
-                    </div>
-
-                    <span class="text-xs font-bold text-slate-500 mb-2">
-                        سطح ارزیابی خطر
-                    </span>
-
-                    <div
-                        id="risk-pill"
-                        class="px-5 py-1.5 rounded-full text-white text-sm font-black shadow-md bg-slate-500 transition-colors"
-                        aria-live="polite"
-                    >
-                        در حال ارزیابی...
-                    </div>
-
-                    <div id="risk-value" class="text-sm text-slate-700 font-extrabold mt-2"></div>
-                </div>
             </div>
 
             <div id="update-badge" class="text-xs text-slate-600 font-bold mt-2 text-center">
