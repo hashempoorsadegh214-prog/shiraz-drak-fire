@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Vazirmatn', sans-serif; -webkit-tap-highlight-color: transparent; }
-        .gauge-circle { transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1); transform: rotate(-90deg); transform-origin: 50% 50%; }
+        .gauge-circle { transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1); transform: rotate(135deg); transform-origin: 50% 50%; }
         @keyframes spin-once {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
@@ -67,24 +67,24 @@
                 </div>
             </details>
 
-            <!-- گیج ارزیابی خطر با طیف ۵ رنگ استاندارد -->
+            <!-- گیج ارزیابی خطر با طیف ۵ رنگ استاندارد (شروع از راست: سبز، زرد، نارنجی، قرمز، بنفش) -->
             <div class="flex flex-col items-center justify-center my-auto py-1">
                 <div class="relative w-52 h-52 flex items-center justify-center">
                     <svg class="w-full h-full" viewBox="0 0 220 220">
-                        <defs>
-                            <!-- طیف استاندارد ۵ تایی: سبز -> زرد -> نارنجی -> قرمز -> بنفش -->
-                            <linearGradient id="gaugeGradient" x1="0%" y1="100%" x2="100%" y2="0%">
-                                <stop offset="0%" stop-color="#22C55E" />    <!-- سبز -->
-                                <stop offset="25%" stop-color="#EAB308" />   <!-- زرد -->
-                                <stop offset="50%" stop-color="#F97316" />   <!-- نارنجی -->
-                                <stop offset="75%" stop-color="#EF4444" />   <!-- قرمز -->
-                                <stop offset="100%" stop-color="#9333EA" />  <!-- بنفش بحرانی -->
-                            </linearGradient>
-                        </defs>
-                        <!-- حلقه پس‌زمینه خاکستری -->
+                        <!-- حلقه پس‌زمینه خاکستری (کمان 270 درجه) -->
                         <circle cx="110" cy="110" r="88" fill="none" stroke="#E2E8F0" stroke-width="15" stroke-linecap="round" stroke-dasharray="415 553" stroke-dashoffset="-69"/>
-                        <!-- میله پویای گیج -->
-                        <circle id="gauge-bar" class="gauge-circle" cx="110" cy="110" r="88" fill="none" stroke="url(#gaugeGradient)" stroke-width="15" stroke-linecap="round" stroke-dasharray="552.92" stroke-dashoffset="552.92"/>
+                        
+                        <!-- ۵ بخش رنگی مجزا پشت سر هم برای رعایت دقیق ترتیب استاندارد -->
+                        <!-- ۱. سبز (پایین راست) -->
+                        <circle cx="110" cy="110" r="88" fill="none" stroke="#22C55E" stroke-width="15" stroke-linecap="round" stroke-dasharray="83 553" stroke-dashoffset="-69"/>
+                        <!-- ۲. زرد (بالا راست) -->
+                        <circle cx="110" cy="110" r="88" fill="none" stroke="#EAB308" stroke-width="15" stroke-linecap="round" stroke-dasharray="83 553" stroke-dashoffset="-152"/>
+                        <!-- ۳. نارنجی (بالا) -->
+                        <circle cx="110" cy="110" r="88" fill="none" stroke="#F97316" stroke-width="15" stroke-linecap="round" stroke-dasharray="83 553" stroke-dashoffset="-235"/>
+                        <!-- ۴. قرمز (بالا چپ) -->
+                        <circle cx="110" cy="110" r="88" fill="none" stroke="#EF4444" stroke-width="15" stroke-linecap="round" stroke-dasharray="83 553" stroke-dashoffset="-318"/>
+                        <!-- ۵. بنفش (بحرانی - پایین چپ) -->
+                        <circle cx="110" cy="110" r="88" fill="none" stroke="#9333EA" stroke-width="15" stroke-linecap="round" stroke-dasharray="83 553" stroke-dashoffset="-401"/>
                     </svg>
 
                     <div class="absolute inset-0 flex flex-col items-center justify-center text-center pt-2">
@@ -173,7 +173,6 @@
         async function loadFWI() {
             const pillEl = document.getElementById('risk-pill');
             const updateEl = document.getElementById('update-badge');
-            const circleEl = document.getElementById('gauge-bar');
             const tipsEl = document.getElementById('safety-tips');
 
             try {
@@ -187,11 +186,6 @@
                 const riskFa = data.risk_level_fa || 'بحرانی';
                 pillEl.innerText = riskFa;
                 pillEl.style.backgroundColor = data.risk_color || '#9333EA';
-
-                const maxVal = 60;
-                const ratio = Math.min(1, Math.max(0, displayVal / maxVal));
-                const circumference = 2 * Math.PI * 88;
-                circleEl.style.strokeDashoffset = circumference - (ratio * (circumference * 0.75));
 
                 const rawDate = data.updated_at || data.forecast_shamsi || '۱۴۰۵/۰۸/۰۳';
                 updateEl.innerText = 'آخرین بروزرسانی داده‌ها: ' + cleanPersianDate(rawDate);
