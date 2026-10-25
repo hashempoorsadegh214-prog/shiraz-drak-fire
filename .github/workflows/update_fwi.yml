@@ -1,196 +1,4 @@
-name: Update FWI Derak
-
-on:
-  workflow_dispatch:
-  schedule:
-    - cron: "30 1 * * *"
-
-permissions:
-  contents: write
-
-jobs:
-  update-fwi:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install requests beautifulsoup4 geopandas shapely pyproj
-
-      - name: Fetch and compute FWI for Mount Derak (high-resolution)
-        run: |
-          set -e
-          mkdir -p data
-
-          cat > get_derak_fwi.py <<'PY'
-          import json
-          import math
-          import requests
-          import geopandas as gpd
-          from bs4 import BeautifulSoup
-          from shapely.geometry import Point
-          from datetime import datetime, timedelta, timezone
-
-          # -------- Settings --------
-          WMS_URL = "https://maps.effis.emergency.copernicus.eu/gwis"
-          LAYER = "ecmwf.query"
-          QUERY_LAYER = "ecmwf.query"
-
-          DERAK_GEOJSON = "Derak_Mountain.geojson"
-          OUTPUT_JSON = "data/derak_fwi.json"
-
-          # تفکیک مکانی (درجه). 0.008 ~ حدود ۸۰۰ متر
-          GRID_STEP = 0.008
-
-          # جعبه پرس‌وجوی GetFeatureInfo (متر) در EPSG:3857
-          HALF_SIZE_METERS = 8000
-
-          WIDTH = 101
-          HEIGHT = 101
-          XPIX = 50
-          YPIX = 50
-
-          IRAN_TZ = timezone(timedelta(hours=3, minutes=30))
-          now = datetime.now(IRAN_TZ)
-
-          # -------- Jalali conversion (FIXED) --------
-          def gregorian_to_jalali(gy, gm, gd):
-              g_days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-
-              # leap year adjust for February
-              leap = (gy % 4 == 0 and (gy % 100 != 0 or gy % 400 == 0))
-              if leap:
-                  g_days_in_month[1] = 29
-
-              gy -= 1600
-              gm -= 1
-              gd -= 1
-
-              g_day_no = (
-                  365 * gy
-                  + (gy + 3) // 4
-                  - (gy + 99) // 100
-                  + (gy + 399) // 400
-              )
-
-              for i in range(gm):
-                  g_day_no += g_days_in_month[i]
-
-              g_day_no += gd
-              j_day_no = g_day_no - 79
-
-              j_np = j_day_no // 12053
-              j_day_no %= 12053
-
-              jy = 979 + 33 * j_np + 4 * (j_day_no // 1461)
-              j_day_no %= 1461
-
-              if j_day_no >= 366:
-                  jy += (j_day_no - 1) // 365
-                  j_day_no = (j_day_no - 1) % 365
-
-              if j_day_no < 186:
-                  jm = 1 + j_day_no // 31
-                  jd = 1 + j_day_no % 31
-              else:
-                  jm = 7 + (j_day_no - 186) // 30
-                  jd = 1 + (j_day_no - 186) % 30
-
-              return jy, jm, jd
-
-          def to_fa_date_slash(dt):
-              jy, jm, jd = gregorian_to_jalali(dt.year, dt.month, dt.day)
-              return f"{jy:04d}/{jm:02d}/{jd:02d}"
-
-          # forecast date: tomorrow
-          forecast_dt = (now + timedelta(days=1)).date()
-          forecast_gregorian = forecast_dt.strftime("%Y-%m-%d")
-          jy, jm, jd = gregorian_to_jalali(forecast_dt.year, forecast_dt.month, forecast_dt.day)
-          forecast_shamsi = f"{jy:04d}/{jm:02d}/{jd:02d}"
-
-          updated_at = f"{to_fa_date_slash(now)} - {now.strftime('%H:%M')}"
-
-          # -------- WebMercator --------
-          def lonlat_to_3857(lon, lat):
-              x = lon * 20037508.34 / 180.0
-              y = math.log(math.tan(math.radians(lat) / 2.0 + math.pi / 4.0)) * 20037508.34 / math.pi
-              return x, y
-
-          # -------- Parse FWI from HTML --------
-          def parse_fwi(html):
-              soup = BeautifulSoup(html, "html.parser")
-              rows = soup.find_all("tr")
-              for row in rows:
-                  cells = row.find_all("td")
-                  if len(cells) < 2:
-                      continue
-                  label = cells[0].get_text(" ", strip=True).lower()
-                  value_text = cells[1].get_text(" ", strip=True)
-
-                  if "fire weather index" in label:
-                      try:
-                          v = float(value_text)
-                          if math.isfinite(v) and 0 <= v <= 200:
-                              return round(v, 2)
-                      except ValueError:
-                          return None
-              return None
-
-          # -------- Risk mapping (dashboard sync) --------
-          def risk_from_fwi(v):
-              # همان باندهایی که قبلاً برای عقربه/رنگ استفاده کرده بودیم
-              if v < 11.2:
-                  return "کم", "Low", "#22c55e"
-              if v < 21.3:
-                  return "متوسط", "Moderate", "#eab308"
-              if v < 38.0:
-                  return "زیاد", "High", "#f97316"
-              if v < 50.0:
-                  return "خیلی زیاد", "Very High", "#ef4444"
-              return "بحرانی", "Extreme", "#9333ea"
-
-          session = requests.Session()
-          session.headers.update({"User-Agent": "SHIRAZ-DERAK-FWI/2.0"})
-
-          def get_fwi_at(lon, lat, time_str):
-              x, y = lonlat_to_3857(lon, lat)
-              bbox = f"{x - HALF_SIZE_METERS},{y - HALF_SIZE_METERS},{x + HALF_SIZE_METERS},{y + HALF_SIZE_METERS}"
-
-              params = {
-                  "SERVICE": "WMS",
-                  "VERSION": "1.1.1",
-                  "REQUEST": "GetFeatureInfo",
-                  "LAYERS": LAYER,
-                  "QUERY_LAYERS": QUERY_LAYER,
-                  "STYLES": "",
-                  "SRS": "EPSG:3857",
-                  "BBOX": bbox,
-                  "WIDTH": str(WIDTH),
-                  "HEIGHT": str(HEIGHT),
-                  "X": str(XPIX),
-                  "Y": str(YPIX),
-                  "INFO_FORMAT": "text/html",
-                  "FEATURE_COUNT": "1",
-                  "FORMAT": "image/png",
-                  "TRANSPARENT": "TRUE",
-                  "TIME": time_str,
-              }
-
-              try:
-                  r = session.get(WMS_URL, params=params, timeout=25)
-                  if r.status_code != 200:
-                      return None, f"HTTP {r.status_code}"
-                  return parse_fwi(r.text), None
-              except Exception as e:
+except Exception as e:
                   return None, str(e)
 
           # -------- Load Derak polygon --------
@@ -223,10 +31,8 @@ jobs:
               rp = geom.representative_point()
               grid = [(round(rp.x, 6), round(rp.y, 6))]
 
-          # Multi-date fallback: today, tomorrow, day+2 (sometimes TIME not published yet)
-          target_dates = []
-          for d in [0, 1, 2]:
-              target_dates.append((now.date() + timedelta(days=d)).strftime("%Y-%m-%d"))
+          # فقط داده مربوط به امروز بررسی می‌شود؛ نه دیروز و نه فردا.
+          target_dates = [now.date().strftime("%Y-%m-%d")]
 
           best_date = None
           collected = []
@@ -248,45 +54,37 @@ jobs:
                   break
 
           if best_date is None:
-              out = {
-                  "area_id": "derak-mountain",
-                  "area_name": "کوهستان دراک",
-                  "forecast_gregorian": forecast_gregorian,
-                  "forecast_shamsi": forecast_shamsi,
-                  "updated_at": updated_at,
-                  "fwi": None,
-                  "risk_level_fa": "نامشخص",
-                  "risk_level_en": "No Data",
-                  "risk_color": "#94a3b8",
-                  "points_count": 0,
-                  "last_epoch": int(now.timestamp()),
-                  "error": "No valid GetFeatureInfo results (possibly TIME not available yet or WMS response format changed).",
-                  "debug_samples": debug_samples
-              }
-          else:
-              mean_fwi = round(sum(collected) / len(collected), 2)
-              risk_fa, risk_en, color = risk_from_fwi(mean_fwi)
+              # اگر داده امروز در دسترس نیست، فایل قبلی را دست‌نخورده نگه می‌داریم.
+              # اجرای workflow ناموفق می‌شود تا نبود داده امروز پنهان نماند.
+              raise RuntimeError(
+                  "No valid FWI data for today (Iran local date: "
+                  f"{forecast_gregorian}). Existing data/derak_fwi.json was not overwritten. "
+                  "Check GWIS WMS response, TIME availability, and parser."
+              )
 
-              # If best_date differs from tomorrow, adjust displayed forecast dates to match best_date
-              bd = datetime.strptime(best_date, "%Y-%m-%d").date()
-              jy2, jm2, jd2 = gregorian_to_jalali(bd.year, bd.month, bd.day)
-              best_shamsi = f"{jy2:04d}/{jm2:02d}/{jd2:02d}"
+          mean_fwi = round(sum(collected) / len(collected), 2)
+          risk_fa, risk_en, color = risk_from_fwi(mean_fwi)
 
-              out = {
-                  "area_id": "derak-mountain",
-                  "area_name": "کوهستان دراک",
-                  "forecast_gregorian": best_date,
-                  "forecast_shamsi": best_shamsi,
-                  "updated_at": updated_at,
-                  "fwi": mean_fwi,
-                  "risk_level_fa": risk_fa,
-                  "risk_level_en": risk_en,
-                  "risk_color": color,
-                  "points_count": len(collected),
-                  "last_epoch": int(now.timestamp()),
-                  "grid_step": GRID_STEP,
-                  "debug_samples": debug_samples
-              }
+          # تاریخ داده نمایش‌داده‌شده باید همان تاریخ امروز باشد.
+          bd = datetime.strptime(best_date, "%Y-%m-%d").date()
+          jy2, jm2, jd2 = gregorian_to_jalali(bd.year, bd.month, bd.day)
+          best_shamsi = f"{jy2:04d}/{jm2:02d}/{jd2:02d}"
+
+          out = {
+              "area_id": "derak-mountain",
+              "area_name": "کوهستان دراک",
+              "forecast_gregorian": best_date,
+              "forecast_shamsi": best_shamsi,
+              "updated_at": updated_at,
+              "fwi": mean_fwi,
+              "risk_level_fa": risk_fa,
+              "risk_level_en": risk_en,
+              "risk_color": color,
+              "points_count": len(collected),
+              "last_epoch": int(now.timestamp()),
+              "grid_step": GRID_STEP,
+              "debug_samples": debug_samples
+          }
 
           with open(OUTPUT_JSON, "w", encoding="utf-8") as f:
               json.dump(out, f, ensure_ascii=False, indent=2)
