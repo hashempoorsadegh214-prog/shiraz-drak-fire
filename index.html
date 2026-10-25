@@ -79,7 +79,6 @@
             justify-content: center;
         }
 
-        /* حلقه گرادینت مخروطی پیوسته: شروع سبز از ۱۲، زرد ساعت ۳، نارنجی ساعت ۶، قرمز ساعت ۹، بنفش ساعت ۱۲ */
         .gauge-conic-ring {
             width: 100%;
             height: 100%;
@@ -100,13 +99,12 @@
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
         }
 
-        /* لایه پوشش خاکستری برای قسمت‌های پر نشده گیج */
         .gauge-mask-svg {
             position: absolute;
             inset: 0;
             width: 100%;
             height: 100%;
-            transform: rotate(-90deg); /* شروع انیمیشن مقدار از ساعت ۱۲ */
+            transform: rotate(-90deg);
             pointer-events: none;
         }
 
@@ -117,7 +115,6 @@
             transition: stroke-dashoffset 0.8s ease;
         }
 
-        /* مرکز سفید دایره */
         .gauge-center-hole {
             width: calc(100% - 44px);
             height: calc(100% - 44px);
@@ -387,7 +384,6 @@
             </summary>
 
             <div class="guide-content text-amber-900 space-y-1">
-                <p>• شروع گیج از ساعت ۱۲ با رنگ سبز (کم‌خطر) آغاز شده و به‌صورت ساعت‌گرد به زرد، نارنجی، قرمز و در انتها (مجدداً ساعت ۱۲) به بنفش (بحرانی) می‌رسد.</p>
                 <p>• مقدار و سطح خطر بر اساس پردازش هوشمند شاخص‌های اقلیمی دراک نمایش داده می‌شود.</p>
                 <p>• با فشردن دکمه GPS، موقعیت و لینک مکان دقیق شما استخراج می‌شود.</p>
                 <p>• در شرایط بحرانی از ورود به ارتفاعات دراک جداً خودداری کنید.</p>
@@ -398,10 +394,8 @@
         <section class="gauge-section relative z-10" aria-label="ارزیابی خطر حریق">
 
             <div class="gauge-wrap">
-                <!-- حلقه رنگی پیوسته ۳۶۰ درجه (سبز و بنفش در ساعت ۱۲ به هم می‌رسند) -->
                 <div class="gauge-conic-ring">
                     
-                    <!-- پوشاننده بخش خالی متناسب با مقدار شاخص -->
                     <svg class="gauge-mask-svg" viewBox="0 0 200 200">
                         <circle
                             id="gauge-progress-circle"
@@ -432,8 +426,6 @@
                         >
                             در حال ارزیابی...
                         </div>
-
-                        <div id="risk-value" class="text-xs text-slate-700 font-extrabold mt-1.5"></div>
                     </div>
 
                 </div>
@@ -612,9 +604,6 @@
     function updateGauge(value) {
         const maskCircle = document.getElementById('gauge-progress-circle');
         const ratio = Math.max(0, Math.min(1, value / MAX_VALUE));
-        
-        // وقتی مقدار حداکثر باشد (۶۰)، تمام دایره ۳۶۰ درجه رنگی دیده می‌شود
-        // و نقطه شروع (سبز) و نقطه پایان (بنفش) در ساعت ۱۲ مماس و کنار هم قرار می‌گیرند.
         const offset = CIRCUMFERENCE * ratio;
         maskCircle.style.strokeDashoffset = -offset;
     }
@@ -693,9 +682,6 @@
             pill.textContent = label;
             pill.style.backgroundColor = color;
 
-            document.getElementById('risk-value').textContent =
-                'مقدار: ' + toPersianDigits(value.toFixed(1));
-
             updateGauge(value);
             updateTips(value);
 
@@ -713,8 +699,6 @@
 
             pill.textContent = 'نامشخص';
             pill.style.backgroundColor = '#64748B';
-
-            document.getElementById('risk-value').textContent = '';
 
             document.getElementById('gauge-progress-circle').style.strokeDashoffset = '0';
 
