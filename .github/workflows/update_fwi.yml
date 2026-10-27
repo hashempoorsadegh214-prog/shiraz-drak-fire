@@ -3,7 +3,7 @@ name: Update FWI Derak
 on:
   workflow_dispatch:
   schedule:
-    - cron: "30 0 * * *"
+    - cron: "37 0 * * *"
 
 permissions:
   contents: write
