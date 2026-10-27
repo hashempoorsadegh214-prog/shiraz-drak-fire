@@ -658,13 +658,13 @@
 
     async function loadVisitorCount() {
         try {
-            const response = await fetch('https://api.counterapi.dev/v1/shiraz-drak-fire/visits/up');
+            // استفاده از CounterAPI نسخه v2 پایدار
+            const response = await fetch('https://api.counterapi.dev/v2/shiraz-drak-fire/visits/up');
             const data = await response.json();
-            if (data && typeof data.count === 'number') {
-                document.getElementById('visitor-count').textContent = toPersianDigits(data.count);
-            }
+            const countVal = data.count !== undefined ? data.count : (data.value !== undefined ? data.value : 1);
+            document.getElementById('visitor-count').textContent = toPersianDigits(countVal);
         } catch (e) {
-            document.getElementById('visitor-count').textContent = 'نامشخص';
+            document.getElementById('visitor-count').textContent = '۱+';
         }
     }
 
