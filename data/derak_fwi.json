@@ -1,71 +1,71 @@
 {
   "area_id": "derak-mountain",
   "area_name": "کوهستان دراک",
-  "forecast_gregorian": "2026-10-28",
-  "forecast_shamsi": "1405/08/06",
-  "updated_at": "1405/08/06 - 09:45",
-  "fwi": 5.78,
-  "risk_level_fa": "کم",
-  "risk_level_en": "Low",
-  "risk_color": "#22c55e",
+  "forecast_gregorian": "2026-10-29",
+  "forecast_shamsi": "1405/08/07",
+  "updated_at": "1405/08/07 - 09:55",
+  "fwi": 32.14,
+  "risk_level_fa": "زیاد",
+  "risk_level_en": "High",
+  "risk_color": "#f97316",
   "points_count": 89,
-  "last_epoch": 1793168111,
+  "last_epoch": 1793255100,
   "grid_step": 0.008,
   "debug_samples": [
     {
-      "time": "2026-10-28",
+      "time": "2026-10-29",
       "lon": 52.44942,
       "lat": 29.637383,
-      "fwi": 6.32,
+      "fwi": 38.37,
       "err": null
     },
     {
-      "time": "2026-10-28",
+      "time": "2026-10-29",
       "lon": 52.40942,
       "lat": 29.645383,
-      "fwi": 6.32,
+      "fwi": 38.37,
       "err": null
     },
     {
-      "time": "2026-10-28",
+      "time": "2026-10-29",
       "lon": 52.41742,
       "lat": 29.645383,
-      "fwi": 6.32,
+      "fwi": 38.37,
       "err": null
     },
     {
-      "time": "2026-10-28",
+      "time": "2026-10-29",
       "lon": 52.42542,
       "lat": 29.645383,
-      "fwi": 6.32,
+      "fwi": 38.37,
       "err": null
     },
     {
-      "time": "2026-10-28",
+      "time": "2026-10-29",
       "lon": 52.43342,
       "lat": 29.645383,
-      "fwi": 6.32,
+      "fwi": 38.37,
       "err": null
     },
     {
-      "time": "2026-10-28",
+      "time": "2026-10-29",
       "lon": 52.44142,
       "lat": 29.645383,
-      "fwi": 6.32,
+      "fwi": 38.37,
       "err": null
     },
     {
-      "time": "2026-10-28",
+      "time": "2026-10-29",
       "lon": 52.44942,
       "lat": 29.645383,
-      "fwi": 6.32,
+      "fwi": 38.37,
       "err": null
     },
     {
-      "time": "2026-10-28",
+      "time": "2026-10-29",
       "lon": 52.39342,
       "lat": 29.653383,
-      "fwi": 6.32,
+      "fwi": 38.37,
       "err": null
     }
   ]
