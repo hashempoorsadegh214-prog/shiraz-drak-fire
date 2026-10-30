@@ -3,7 +3,10 @@ name: Update FWI Derak
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 5 * * *"
+    # نوبت اول: ساعت 01:45 به وقت UTC (معادل ساعت 05:15 صبح ایران)
+    - cron: "45 1 * * *"
+    # نوبت دوم (تلاش مجدد): ساعت 02:40 به وقت UTC (معادل ساعت 06:10 صبح ایران)
+    - cron: "40 2 * * *"
       
 permissions:
   contents: write
@@ -27,7 +30,36 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install requests beautifulsoup4 geopandas shapely pyproj
 
+      - name: Check if already updated today
+        id: check_update
+        run: |
+          python -c '
+          import json, os
+          from datetime import datetime, timedelta, timezone
+
+          iran_tz = timezone(timedelta(hours=3, minutes=30))
+          today = datetime.now(iran_tz).strftime("%Y-%m-%d")
+          file_path = "data/derak_fwi.json"
+
+          if os.path.exists(file_path):
+              try:
+                  with open(file_path, "r", encoding="utf-8") as f:
+                      data = json.load(f)
+                      if data.get("forecast_gregorian") == today:
+                          print("FWI already updated today.")
+                          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+                              out.write("already_updated=true\n")
+                          exit(0)
+              except Exception:
+                  pass
+
+          print("FWI needs update.")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write("already_updated=false\n")
+          '
+
       - name: Fetch and compute FWI for Mount Derak
+        if: steps.check_update.outputs.already_updated != 'true'
         run: |
           set -euxo pipefail
           mkdir -p data
@@ -316,6 +348,7 @@ jobs:
           python get_derak_fwi.py
 
       - name: Commit and push
+        if: steps.check_update.outputs.already_updated != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
