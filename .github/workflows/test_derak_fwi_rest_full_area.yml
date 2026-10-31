@@ -1,495 +1,86 @@
-name: Test Derak FWI REST Full Area
+name: Test Derak REST Full-Area Forecast
 
 on:
   workflow_dispatch:
     inputs:
       target_date:
-        description: "تاریخ میلادی برای آزمایش؛ خالی باشد یعنی امروز به وقت ایران (YYYY-MM-DD)"
+        description: "Start date in Tehran time (YYYY-MM-DD); leave empty for today"
         required: false
         type: string
+      days_ahead:
+        description: "Maximum forecast range in days"
+        required: true
+        default: "10"
+        type: string
+
+  schedule:
+    # 06:00 Tehran
+    - cron: "30 2 * * *"
+
+    # Additional checks during the day:
+    # 09:00, 12:00, 15:00 and 18:00 Tehran
+    - cron: "30 5,8,11,14 * * *"
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
-  group: derak-rest-full-area-test
+  group: derak-rest-full-area-forecast
   cancel-in-progress: false
 
 jobs:
-  test-rest:
+  forecast:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
-      - name: دریافت مخزن
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: نصب Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: "pip"
 
-      - name: نصب کتابخانه‌ها
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install requests geopandas shapely pyproj
 
-      - name: دریافت REST و محاسبه FWI کل محدوده
+      - name: Fetch and aggregate full-area forecast
         env:
           TARGET_DATE: ${{ inputs.target_date }}
-          PYTHONUNBUFFERED: "1"
+          DAYS_AHEAD: ${{ inputs.days_ahead || '10' }}
+          TZ: Asia/Tehran
         run: |
-          python - <<'PY'
-          import os
-          import sys
-          import json
-          import csv
-          import time
-          import math
-          import statistics
-          from pathlib import Path
-          from datetime import datetime
-          from zoneinfo import ZoneInfo
+          python scripts/test_derak_fwi_rest_full_area.py
 
-          import requests
-          import geopandas as gpd
-          from shapely.geometry import Point
-
-          # --------------------------------------------------
-          # تنظیمات
-          # --------------------------------------------------
-          API_URL = (
-              "https://api.effis.emergency.copernicus.eu/"
-              "rest/2/burntareas/charts/wms"
-          )
-
-          BOUNDARY_FILE = Path("Derak_Mountain.geojson")
-          OUTPUT_DIR = Path("rest-full-area-results")
-          OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-          GRID_STEP = 0.008
-          TIMEZONE = ZoneInfo("Asia/Tehran")
-          REQUEST_TIMEOUT = 45
-          MAX_RETRIES = 3
-
-          # --------------------------------------------------
-          # انتخاب تاریخ
-          # --------------------------------------------------
-          requested_date = os.environ.get("TARGET_DATE", "").strip()
-
-          if requested_date:
-              try:
-                  target_date = datetime.strptime(
-                      requested_date, "%Y-%m-%d"
-                  ).date()
-                  if target_date.isoformat() != requested_date:
-                      raise ValueError("فرمت تاریخ صحیح نیست")
-              except ValueError:
-                  print("ERROR: تاریخ باید به شکل YYYY-MM-DD باشد.")
-                  sys.exit(1)
-          else:
-              target_date = datetime.now(TIMEZONE).date()
-
-          target_date_text = target_date.isoformat()
-
-          print("=" * 65)
-          print("آزمایش REST برای کل محدوده کوهستان دراک")
-          print("زمان ایران:", datetime.now(TIMEZONE).isoformat())
-          print("تاریخ مورد درخواست:", target_date_text)
-          print("اندازه شبکه:", GRID_STEP, "درجه")
-          print("=" * 65)
-
-          # --------------------------------------------------
-          # خواندن و آماده‌سازی مرز
-          # --------------------------------------------------
-          if not BOUNDARY_FILE.exists():
-              print(f"ERROR: فایل مرز پیدا نشد: {BOUNDARY_FILE}")
-              sys.exit(1)
-
-          boundary_gdf = gpd.read_file(BOUNDARY_FILE)
-
-          if boundary_gdf.empty:
-              print("ERROR: فایل مرز فاقد عارضه است.")
-              sys.exit(1)
-
-          if boundary_gdf.crs is None:
-              print(
-                  "ERROR: سیستم مختصات فایل مرز مشخص نیست؛ "
-                  "برای جلوگیری از مختصات اشتباه، اجرا متوقف شد."
-              )
-              sys.exit(1)
-
-          boundary_gdf = boundary_gdf.to_crs("EPSG:4326")
-          boundary = boundary_gdf.geometry.union_all()
-
-          if boundary.is_empty or not boundary.is_valid:
-              print("ERROR: هندسه مرز خالی یا نامعتبر است.")
-              sys.exit(1)
-
-          min_lon, min_lat, max_lon, max_lat = boundary.bounds
-
-          print("محدوده جغرافیایی:")
-          print(f"  طول: {min_lon:.6f} تا {max_lon:.6f}")
-          print(f"  عرض: {min_lat:.6f} تا {max_lat:.6f}")
-
-          # --------------------------------------------------
-          # ساخت شبکه و انتخاب نقاط داخل مرز
-          # --------------------------------------------------
-          # شبکه از کران پایین مرز شروع می‌شود.
-          # فقط نقاطی که درون یا روی مرز هستند نگه داشته می‌شوند.
-          points = []
-          row_count = math.floor((max_lat - min_lat) / GRID_STEP) + 1
-          col_count = math.floor((max_lon - min_lon) / GRID_STEP) + 1
-
-          for row in range(row_count + 1):
-              lat = min_lat + row * GRID_STEP
-              if lat > max_lat + 1e-10:
-                  break
-
-              for col in range(col_count + 1):
-                  lon = min_lon + col * GRID_STEP
-                  if lon > max_lon + 1e-10:
-                      break
-
-                  point = Point(lon, lat)
-
-                  if boundary.covers(point):
-                      points.append({
-                          "point_number": len(points) + 1,
-                          "longitude": round(lon, 8),
-                          "latitude": round(lat, 8),
-                      })
-
-          if not points:
-              print("ERROR: هیچ نقطه‌ای داخل محدوده ساخته نشد.")
-              sys.exit(1)
-
-          print(f"تعداد نقاط داخل مرز: {len(points)}")
-
-          # --------------------------------------------------
-          # توابع استخراج مقدار FWI و تاریخ پاسخ
-          # --------------------------------------------------
-          def normalize_date(value):
-              """استخراج YYYY-MM-DD از تاریخ پاسخ API."""
-              if value is None:
-                  return None
-
-              text = str(value).strip()
-
-              if len(text) >= 10:
-                  candidate = text[:10]
-                  try:
-                      return datetime.strptime(
-                          candidate, "%Y-%m-%d"
-                      ).date().isoformat()
-                  except ValueError:
-                      pass
-
-              return None
-
-          def parse_fwi_response(payload, wanted_date):
-              """
-              مقدار FWI فقط زمانی پذیرفته می‌شود که
-              تاریخ پاسخ دقیقاً با تاریخ درخواست برابر باشد.
-              """
-              if not isinstance(payload, dict):
-                  raise ValueError("ساختار پاسخ API دیکشنری نیست.")
-
-              x_data = payload.get("x_data")
-              y_data = payload.get("y_data")
-
-              if not isinstance(x_data, list):
-                  raise ValueError("فیلد x_data در پاسخ موجود نیست.")
-
-              if not isinstance(y_data, dict):
-                  raise ValueError("فیلد y_data در پاسخ موجود نیست.")
-
-              fwi_values = y_data.get("fwi")
-
-              if not isinstance(fwi_values, list):
-                  raise ValueError("فیلد y_data.fwi آرایه نیست.")
-
-              if len(x_data) != len(fwi_values):
-                  raise ValueError(
-                      "تعداد تاریخ‌ها و مقادیر FWI برابر نیست."
-                  )
-
-              matching_values = []
-
-              for date_value, fwi_value in zip(x_data, fwi_values):
-                  response_date = normalize_date(date_value)
-
-                  if response_date != wanted_date:
-                      continue
-
-                  if fwi_value is None:
-                      continue
-
-                  try:
-                      numeric_value = float(fwi_value)
-                  except (TypeError, ValueError):
-                      continue
-
-                  if not math.isfinite(numeric_value):
-                      continue
-
-                  if numeric_value < 0:
-                      continue
-
-                  matching_values.append(numeric_value)
-
-              if not matching_values:
-                  returned_dates = [
-                      normalize_date(value) for value in x_data
-                  ]
-                  raise ValueError(
-                      "برای تاریخ درخواستی مقدار معتبر FWI برنگشت. "
-                      f"تاریخ‌های موجود در پاسخ: {returned_dates}"
-                  )
-
-              # در صورت وجود بیش از یک مقدار برای همان تاریخ،
-              # میانگین همان مقادیر تکراری برای نقطه محاسبه می‌شود.
-              return statistics.mean(matching_values)
-
-          # --------------------------------------------------
-          # دریافت مقدار REST برای هر نقطه
-          # --------------------------------------------------
-          session = requests.Session()
-          session.headers.update({
-              "User-Agent": "Derak-FWI-Full-Area-Test/1.0",
-              "Accept": "application/json",
-          })
-
-          results = []
-          failures = []
-
-          for index, point in enumerate(points, start=1):
-              lon = point["longitude"]
-              lat = point["latitude"]
-
-              params = {
-                  "model": "ecmwf",
-                  "day_gte": target_date_text,
-                  "day_lte": target_date_text,
-                  "point": f"({lon} {lat})",
-              }
-
-              print(
-                  f"[{index}/{len(points)}] "
-                  f"درخواست REST: lon={lon:.6f}, lat={lat:.6f}"
-              )
-
-              value = None
-              error_message = None
-
-              for attempt in range(1, MAX_RETRIES + 1):
-                  try:
-                      response = session.get(
-                          API_URL,
-                          params=params,
-                          timeout=REQUEST_TIMEOUT,
-                      )
-                      response.raise_for_status()
-
-                      try:
-                          payload = response.json()
-                      except ValueError as exc:
-                          raise ValueError(
-                              "پاسخ API به JSON معتبر تبدیل نشد."
-                          ) from exc
-
-                      value = parse_fwi_response(
-                          payload, target_date_text
-                      )
-                      error_message = None
-                      break
-
-                  except (
-                      requests.RequestException,
-                      ValueError,
-                      TypeError,
-                  ) as exc:
-                      error_message = str(exc)
-                      print(
-                          f"  تلاش {attempt}/{MAX_RETRIES} ناموفق: "
-                          f"{error_message}"
-                      )
-
-                      if attempt < MAX_RETRIES:
-                          time.sleep(2 * attempt)
-
-              record = {
-                  "point_number": point["point_number"],
-                  "longitude": lon,
-                  "latitude": lat,
-                  "date": target_date_text,
-                  "rest_fwi": value,
-                  "status": "SUCCESS" if value is not None else "FAILED",
-                  "rest_error": error_message or "",
-              }
-
-              results.append(record)
-
-              if value is None:
-                  failures.append(record)
-                  print("  نتیجه: ناموفق")
-              else:
-                  print(f"  FWI: {value:.5f}")
-
-              # فاصله کوتاه برای کاهش فشار روی سرویس
-              time.sleep(0.15)
-
-          session.close()
-
-          # --------------------------------------------------
-          # آمار نقاط موفق
-          # --------------------------------------------------
-          valid_records = [
-              record for record in results
-              if record["rest_fwi"] is not None
-          ]
-
-          valid_values = [
-              record["rest_fwi"] for record in valid_records
-          ]
-
-          mean_fwi = (
-              statistics.mean(valid_values)
-              if valid_values else None
-          )
-
-          min_fwi = min(valid_values) if valid_values else None
-          max_fwi = max(valid_values) if valid_values else None
-
-          coverage_percent = (
-              len(valid_records) / len(points) * 100
-              if points else 0
-          )
-
-          # میانگین فقط زمانی برای کل محدوده تأیید می‌شود
-          # که همه نقاط شبکه مقدار معتبر داشته باشند.
-          full_area_mean = (
-              mean_fwi if len(valid_records) == len(points) else None
-          )
-
-          summary = {
-              "source": "Copernicus EFFIS REST API",
-              "model": "ecmwf",
-              "requested_date": target_date_text,
-              "timezone": "Asia/Tehran",
-              "generated_at": datetime.now(TIMEZONE).isoformat(),
-              "boundary_file": str(BOUNDARY_FILE),
-              "grid_step_degrees": GRID_STEP,
-              "total_grid_points": len(points),
-              "successful_points": len(valid_records),
-              "failed_points": len(failures),
-              "coverage_percent": round(coverage_percent, 3),
-              "mean_fwi_of_successful_points": (
-                  round(mean_fwi, 6) if mean_fwi is not None else None
-              ),
-              "full_area_mean_fwi": (
-                  round(full_area_mean, 6)
-                  if full_area_mean is not None else None
-              ),
-              "minimum_fwi": (
-                  round(min_fwi, 6) if min_fwi is not None else None
-              ),
-              "maximum_fwi": (
-                  round(max_fwi, 6) if max_fwi is not None else None
-              ),
-              "full_area_result_valid": len(valid_records) == len(points),
-              "note": (
-                  "میانگین کل محدوده فقط در صورت موفقیت همه نقاط "
-                  "به‌عنوان full_area_mean_fwi ثبت می‌شود. "
-                  "این آزمایش صحت مستقل پیش‌بینی را ارزیابی نمی‌کند."
-              ),
-              "points": results,
-          }
-
-          # --------------------------------------------------
-          # ذخیره JSON و CSV
-          # --------------------------------------------------
-          json_path = OUTPUT_DIR / "derak_rest_full_area.json"
-          csv_path = OUTPUT_DIR / "derak_rest_full_area.csv"
-
-          with json_path.open("w", encoding="utf-8") as file:
-              json.dump(
-                  summary,
-                  file,
-                  ensure_ascii=False,
-                  indent=2,
-              )
-
-          with csv_path.open(
-              "w", encoding="utf-8-sig", newline=""
-          ) as file:
-              fieldnames = [
-                  "point_number",
-                  "longitude",
-                  "latitude",
-                  "date",
-                  "rest_fwi",
-                  "status",
-                  "rest_error",
-              ]
-
-              writer = csv.DictWriter(
-                  file, fieldnames=fieldnames
-              )
-              writer.writeheader()
-              writer.writerows(results)
-
-          # --------------------------------------------------
-          # خلاصه قابل مشاهده در گزارش Actions
-          # --------------------------------------------------
-          print("\n" + "=" * 65)
-          print("خلاصه آزمایش REST")
-          print("=" * 65)
-          print("تاریخ:", target_date_text)
-          print("تعداد کل نقاط:", len(points))
-          print("نقاط موفق:", len(valid_records))
-          print("نقاط ناموفق:", len(failures))
-          print(f"پوشش داده: {coverage_percent:.2f}%")
-
-          if mean_fwi is not None:
-              print(
-                  "میانگین نقاط موفق:",
-                  f"{mean_fwi:.6f}"
-              )
-              print("کمینه FWI:", f"{min_fwi:.6f}")
-              print("بیشینه FWI:", f"{max_fwi:.6f}")
-
-          if full_area_mean is not None:
-              print(
-                  "میانگین معتبر کل محدوده:",
-                  f"{full_area_mean:.6f}"
-              )
-          else:
-              print(
-                  "هشدار: میانگین کل محدوده تأیید نشد؛ "
-                  "حداقل یک نقطه داده معتبر ندارد."
-              )
-
-          print("\nJSON:", json_path)
-          print("CSV:", csv_path)
-
-          # در صورت نقص پوشش، فایل‌ها حفظ می‌شوند ولی اجرای
-          # گردش‌کار ناموفق می‌شود تا نقص پنهان نماند.
-          if len(valid_records) != len(points):
-              print(
-                  "\nERROR: همه نقاط داده معتبر ندارند. "
-                  "برای تأیید میانگین کل محدوده باید خطاها بررسی شوند."
-              )
-              sys.exit(1)
-
-          print("\nSUCCESS: تمام نقاط شبکه داده معتبر دارند.")
-          PY
-
-      - name: بارگذاری گزارش‌ها
+      - name: Upload forecast reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: derak-rest-full-area
-          path: rest-full-area-results/
+          name: derak-rest-full-area-forecast
+          path: |
+            data/derak_fwi_forecast.json
+            data/derak_fwi_forecast.csv
+            data/derak_fwi_forecast_points.csv
+            data/derak_fwi_forecast_errors.csv
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 30
+
+      - name: Commit updated forecast archive
+        if: success() && github.event_name == 'schedule'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add data/derak_fwi_forecast.json
+          git add data/derak_fwi_forecast.csv
+
+          if ! git diff --cached --quiet; then
+            git commit -m "Update Derak REST forecast archive"
+            git push
+          else
+            echo "No forecast archive changes to commit."
+          fi
