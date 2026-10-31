@@ -8,17 +8,16 @@ on:
         required: false
         type: string
       days_ahead:
-        description: "Maximum forecast range in days"
+        description: "Forecast range in days (0-14)"
         required: true
         default: "10"
         type: string
 
   schedule:
-    # 06:00 Tehran
+    # 06:00 Iran time
     - cron: "30 2 * * *"
 
-    # Additional checks during the day:
-    # 09:00, 12:00, 15:00 and 18:00 Tehran
+    # 09:00, 12:00, 15:00 and 18:00 Iran time
     - cron: "30 5,8,11,14 * * *"
 
 permissions:
@@ -41,7 +40,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: "pip"
 
       - name: Install dependencies
         run: |
