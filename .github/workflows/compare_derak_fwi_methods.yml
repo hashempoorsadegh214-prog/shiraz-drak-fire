@@ -1,0 +1,411 @@
+name: Compare Derak FWI - REST vs WMS
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install requests geopandas shapely pyproj beautifulsoup4
+
+      - name: Compare REST and WMS values at identical points
+        run: |
+          mkdir -p comparison-results
+
+          cat > compare_fwi.py <<'PY'
+          import csv
+          import datetime as dt
+          import json
+          import math
+          import time
+          from pathlib import Path
+          from zoneinfo import ZoneInfo
+
+          import geopandas as gpd
+          import requests
+          from bs4 import BeautifulSoup
+          from shapely.geometry import Point
+          from shapely.ops import unary_union
+
+          BASE = Path.cwd()
+          BOUNDARY_FILE = BASE / "Derak_Mountain.geojson"
+          OUTPUT_DIR = BASE / "comparison-results"
+
+          REST_URL = (
+              "https://api.effis.emergency.copernicus.eu/"
+              "rest/2/burntareas/charts/wms"
+          )
+          WMS_URL = "https://maps.effis.emergency.copernicus.eu/gwis"
+
+          GRID_STEP = 0.008
+          MODEL = "ecmwf"
+          POINTS_TO_TEST = 9
+          TIMEOUT = 40
+          TEHRAN = ZoneInfo("Asia/Tehran")
+
+          OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+          session = requests.Session()
+          session.headers.update({
+              "User-Agent": "Derak-FWI-Method-Comparison/1.0",
+              "Accept": "*/*"
+          })
+
+          def build_grid():
+              boundary = gpd.read_file(BOUNDARY_FILE)
+
+              if boundary.empty:
+                  raise RuntimeError("Boundary file is empty.")
+
+              if boundary.crs is None:
+                  raise RuntimeError(
+                      "Boundary CRS is missing; refusing to guess it."
+                  )
+
+              boundary = boundary.to_crs("EPSG:4326")
+              geometry = unary_union(
+                  [g for g in boundary.geometry if g is not None]
+              )
+
+              if geometry.is_empty:
+                  raise RuntimeError("Boundary geometry is empty.")
+
+              minx, miny, maxx, maxy = geometry.bounds
+              points = []
+              lat = miny
+
+              while lat <= maxy + 1e-9:
+                  lon = minx
+
+                  while lon <= maxx + 1e-9:
+                      point = Point(lon, lat)
+
+                      if geometry.covers(point):
+                          points.append(
+                              (round(lon, 6), round(lat, 6))
+                          )
+
+                      lon += GRID_STEP
+
+                  lat += GRID_STEP
+
+              points = sorted(set(points))
+
+              if not points:
+                  raise RuntimeError("No points found inside boundary.")
+
+              return points
+
+          def choose_points(grid, count):
+              if len(grid) <= count:
+                  return grid
+
+              # Select points spread across the sorted grid.
+              indexes = [
+                  round(i * (len(grid) - 1) / (count - 1))
+                  for i in range(count)
+              ]
+
+              return [grid[i] for i in indexes]
+
+          def get_rest_fwi(lon, lat, date_string):
+              params = {
+                  "model": MODEL,
+                  "day_gte": date_string,
+                  "day_lte": date_string,
+                  "point": f"({lon:.6f} {lat:.6f})"
+              }
+
+              response = session.get(
+                  REST_URL,
+                  params=params,
+                  timeout=TIMEOUT
+              )
+              response.raise_for_status()
+              payload = response.json()
+
+              dates = payload.get("x_data", [])
+              values = payload.get("y_data", {}).get("fwi", [])
+
+              if not isinstance(dates, list) or not isinstance(values, list):
+                  raise ValueError("Unexpected REST response structure.")
+
+              if len(dates) != len(values):
+                  raise ValueError("REST date/value lengths do not match.")
+
+              for raw_date, raw_value in zip(dates, values):
+                  if str(raw_date)[:10] != date_string:
+                      continue
+
+                  value = float(raw_value)
+
+                  if math.isfinite(value) and 0 <= value <= 200:
+                      return value
+
+              raise ValueError(
+                  f"REST returned no valid FWI for {date_string}"
+              )
+
+          def lonlat_to_3857(lon, lat):
+              lat = max(min(lat, 85.05112878), -85.05112878)
+              x = lon * 20037508.34 / 180.0
+              y = (
+                  math.log(
+                      math.tan(math.radians(lat) / 2.0 + math.pi / 4.0)
+                  )
+                  * 20037508.34 / math.pi
+              )
+              return x, y
+
+          def parse_wms_fwi(html):
+              soup = BeautifulSoup(html, "html.parser")
+
+              for row in soup.find_all("tr"):
+                  cells = row.find_all(["td", "th"])
+
+                  if len(cells) < 2:
+                      continue
+
+                  label = cells[0].get_text(" ", strip=True).lower()
+                  value_text = cells[1].get_text(" ", strip=True)
+
+                  if "fire weather index" in label:
+                      try:
+                          value = float(value_text)
+
+                          if math.isfinite(value) and 0 <= value <= 200:
+                              return value
+                      except (ValueError, TypeError):
+                          pass
+
+              # Do not guess a value from unrelated HTML text.
+              raise ValueError(
+                  "Could not identify the Fire Weather Index in WMS HTML."
+              )
+
+          def get_wms_fwi(lon, lat, date_string):
+              x, y = lonlat_to_3857(lon, lat)
+
+              half_size = 8000
+              width = 101
+              height = 101
+
+              bbox = (
+                  f"{x - half_size},{y - half_size},"
+                  f"{x + half_size},{y + half_size}"
+              )
+
+              params = {
+                  "SERVICE": "WMS",
+                  "VERSION": "1.1.1",
+                  "REQUEST": "GetFeatureInfo",
+                  "LAYERS": "ecmwf.query",
+                  "QUERY_LAYERS": "ecmwf.query",
+                  "STYLES": "",
+                  "SRS": "EPSG:3857",
+                  "BBOX": bbox,
+                  "WIDTH": str(width),
+                  "HEIGHT": str(height),
+                  "X": "50",
+                  "Y": "50",
+                  "INFO_FORMAT": "text/html",
+                  "FEATURE_COUNT": "1",
+                  "FORMAT": "image/png",
+                  "TRANSPARENT": "TRUE",
+                  "TIME": date_string
+              }
+
+              response = session.get(
+                  WMS_URL,
+                  params=params,
+                  timeout=TIMEOUT
+              )
+              response.raise_for_status()
+
+              return parse_wms_fwi(response.text)
+
+          def main():
+              now = dt.datetime.now(TEHRAN)
+              date_string = now.date().isoformat()
+
+              print("=" * 72)
+              print("DERAK FWI METHOD COMPARISON: REST vs WMS")
+              print("=" * 72)
+              print(f"Tehran time: {now.isoformat()}")
+              print(f"Target date: {date_string}")
+              print(f"Grid step: {GRID_STEP} degrees")
+              print()
+
+              grid = build_grid()
+              selected = choose_points(grid, POINTS_TO_TEST)
+
+              print(f"Total grid points: {len(grid)}")
+              print(f"Selected comparison points: {len(selected)}")
+              print()
+              print(
+                  f"{'No.':>3} {'Longitude':>11} {'Latitude':>10} "
+                  f"{'REST':>10} {'WMS':>10} {'Abs diff':>10} {'Status':>12}"
+              )
+
+              rows = []
+
+              for number, (lon, lat) in enumerate(selected, start=1):
+                  row = {
+                      "point_number": number,
+                      "longitude": lon,
+                      "latitude": lat,
+                      "date": date_string,
+                      "rest_fwi": None,
+                      "wms_fwi": None,
+                      "absolute_difference": None,
+                      "status": None,
+                      "rest_error": None,
+                      "wms_error": None
+                  }
+
+                  try:
+                      row["rest_fwi"] = get_rest_fwi(
+                          lon, lat, date_string
+                      )
+                  except Exception as exc:
+                      row["rest_error"] = str(exc)
+
+                  # Small delay to avoid sending requests too quickly.
+                  time.sleep(0.4)
+
+                  try:
+                      row["wms_fwi"] = get_wms_fwi(
+                          lon, lat, date_string
+                      )
+                  except Exception as exc:
+                      row["wms_error"] = str(exc)
+
+                  rest_value = row["rest_fwi"]
+                  wms_value = row["wms_fwi"]
+
+                  if rest_value is not None and wms_value is not None:
+                      difference = abs(rest_value - wms_value)
+                      row["absolute_difference"] = round(difference, 4)
+                      row["status"] = "COMPARED"
+
+                      print(
+                          f"{number:>3} {lon:>11.6f} {lat:>10.6f} "
+                          f"{rest_value:>10.3f} {wms_value:>10.3f} "
+                          f"{difference:>10.3f} {'COMPARED':>12}"
+                      )
+                  else:
+                      row["status"] = "INCOMPLETE"
+
+                      print(
+                          f"{number:>3} {lon:>11.6f} {lat:>10.6f} "
+                          f"{str(rest_value):>10} {str(wms_value):>10} "
+                          f"{'—':>10} {'INCOMPLETE':>12}"
+                      )
+
+                  rows.append(row)
+
+              comparable = [
+                  r for r in rows
+                  if r["absolute_difference"] is not None
+              ]
+
+              differences = [
+                  r["absolute_difference"] for r in comparable
+              ]
+
+              summary = {
+                  "generated_at_tehran": now.isoformat(),
+                  "target_date": date_string,
+                  "model": MODEL,
+                  "grid_step_degrees": GRID_STEP,
+                  "total_grid_points": len(grid),
+                  "selected_points": len(selected),
+                  "comparable_points": len(comparable),
+                  "incomplete_points": len(rows) - len(comparable),
+                  "mean_absolute_difference": (
+                      round(sum(differences) / len(differences), 4)
+                      if differences else None
+                  ),
+                  "maximum_absolute_difference": (
+                      round(max(differences), 4)
+                      if differences else None
+                  ),
+                  "comparison_results": rows
+              }
+
+              json_path = OUTPUT_DIR / "rest_wms_comparison.json"
+              csv_path = OUTPUT_DIR / "rest_wms_comparison.csv"
+
+              json_path.write_text(
+                  json.dumps(summary, ensure_ascii=False, indent=2),
+                  encoding="utf-8"
+              )
+
+              with csv_path.open(
+                  "w", newline="", encoding="utf-8-sig"
+              ) as file:
+                  writer = csv.DictWriter(
+                      file,
+                      fieldnames=list(rows[0].keys())
+                  )
+                  writer.writeheader()
+                  writer.writerows(rows)
+
+              print()
+              print("=" * 72)
+              print(f"Comparable points: {len(comparable)}/{len(rows)}")
+
+              if differences:
+                  print(
+                      "Mean absolute difference: "
+                      f"{summary['mean_absolute_difference']}"
+                  )
+                  print(
+                      "Maximum absolute difference: "
+                      f"{summary['maximum_absolute_difference']}"
+                  )
+              else:
+                  print("No point had valid values from both methods.")
+
+              print(f"JSON report: {json_path}")
+              print(f"CSV report: {csv_path}")
+
+              # The workflow reports the comparison even when some requests
+              # fail; failures are recorded instead of being hidden.
+              if not comparable:
+                  raise RuntimeError(
+                      "No comparable REST/WMS values. "
+                      "Inspect the uploaded report and error messages."
+                  )
+
+          if __name__ == "__main__":
+              main()
+          PY
+
+          python compare_fwi.py
+
+      - name: Upload comparison report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: derak-rest-wms-comparison
+          path: comparison-results/
+          if-no-files-found: warn
+          retention-days: 14
