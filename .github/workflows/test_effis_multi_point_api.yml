@@ -1,0 +1,229 @@
+name: Test EFFIS Multi-point API
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install requests geopandas shapely pyproj
+
+      - name: Test EFFIS API at five points inside Mount Derak
+        run: |
+          cat > test_effis_multi_point.py <<'PY'
+          import json
+          import statistics
+          import time
+          from datetime import datetime, timedelta
+          from zoneinfo import ZoneInfo
+
+          import geopandas as gpd
+          import requests
+          from shapely.geometry import Point
+          from shapely.ops import unary_union
+
+          API_URL = (
+              "https://api.effis.emergency.copernicus.eu/"
+              "rest/2/burntareas/charts/wms"
+          )
+          GEOJSON_PATH = "Derak_Mountain.geojson"
+          IRAN_TZ = ZoneInfo("Asia/Tehran")
+
+          def main():
+              now = datetime.now(IRAN_TZ)
+              start_date = now.date()
+              end_date = start_date + timedelta(days=9)
+
+              print("Current Iran date:", start_date.isoformat())
+              print("Requested date range:",
+                    start_date.isoformat(), "to", end_date.isoformat())
+
+              # Load the actual Mount Derak boundary and convert it to longitude/latitude.
+              boundary_gdf = gpd.read_file(GEOJSON_PATH)
+
+              if boundary_gdf.crs is None:
+                  raise RuntimeError(
+                      "The boundary has no CRS. Cannot safely select API points."
+                  )
+
+              boundary_gdf = boundary_gdf.to_crs("EPSG:4326")
+              boundary = unary_union(boundary_gdf.geometry)
+              min_lon, min_lat, max_lon, max_lat = boundary.bounds
+
+              # Recreate a grid and retain only points inside the boundary.
+              step = 0.008
+              candidates = []
+
+              lat = min_lat
+              while lat <= max_lat:
+                  lon = min_lon
+                  while lon <= max_lon:
+                      point = Point(lon, lat)
+                      if boundary.covers(point):
+                          candidates.append((lon, lat))
+                      lon += step
+                  lat += step
+
+              if len(candidates) < 5:
+                  raise RuntimeError(
+                      f"Only {len(candidates)} grid points found inside boundary."
+                  )
+
+              # Select five points distributed across the candidate list.
+              indexes = [
+                  round(i * (len(candidates) - 1) / 4)
+                  for i in range(5)
+              ]
+              selected_points = [candidates[i] for i in indexes]
+
+              print(f"Grid points inside boundary: {len(candidates)}")
+              print("Testing five distributed points:")
+
+              session = requests.Session()
+              results_by_date = {}
+              successful_points = 0
+
+              for index, (lon, lat) in enumerate(selected_points, start=1):
+                  print(
+                      f"\nPoint {index}: lon={lon:.6f}, lat={lat:.6f}"
+                  )
+
+                  params = {
+                      "model": "ecmwf",
+                      "day_gte": start_date.isoformat(),
+                      "day_lte": end_date.isoformat(),
+                      "point": f"({lon:.6f} {lat:.6f})",
+                  }
+
+                  response_data = None
+
+                  for attempt in range(1, 4):
+                      try:
+                          response = session.get(
+                              API_URL,
+                              params=params,
+                              timeout=45,
+                          )
+
+                          print(
+                              f"HTTP status (attempt {attempt}): "
+                              f"{response.status_code}"
+                          )
+
+                          response.raise_for_status()
+                          response_data = response.json()
+
+                          if not isinstance(response_data, dict):
+                              raise ValueError("Response is not a JSON object.")
+
+                          x_data = response_data.get("x_data")
+                          y_data = response_data.get("y_data")
+
+                          if not isinstance(x_data, list):
+                              raise ValueError("Missing or invalid x_data.")
+
+                          if not isinstance(y_data, dict):
+                              raise ValueError("Missing or invalid y_data.")
+
+                          fwi_values = y_data.get("fwi")
+
+                          if not isinstance(fwi_values, list):
+                              raise ValueError("Missing or invalid y_data.fwi.")
+
+                          if len(x_data) != len(fwi_values):
+                              raise ValueError(
+                                  "x_data and fwi arrays have different lengths."
+                              )
+
+                          break
+
+                      except Exception as exc:
+                          print(f"Request failed: {exc}")
+                          response_data = None
+
+                          if attempt < 3:
+                              time.sleep(3 * attempt)
+
+                  if response_data is None:
+                      print("RESULT: FAILED after three attempts")
+                      continue
+
+                  x_data = response_data["x_data"]
+                  fwi_values = response_data["y_data"]["fwi"]
+                  valid_count = 0
+
+                  for date_text, value in zip(x_data, fwi_values):
+                      if value is None:
+                          continue
+
+                      try:
+                          value = float(value)
+                      except (TypeError, ValueError):
+                          continue
+
+                      if value < 0:
+                          continue
+
+                      date_key = str(date_text)[:10]
+                      results_by_date.setdefault(date_key, []).append(value)
+                      valid_count += 1
+
+                      print(f"  {date_key}: FWI={value:.3f}")
+
+                  if valid_count:
+                      successful_points += 1
+                      print(f"Valid daily values: {valid_count}")
+                  else:
+                      print("RESULT: No valid FWI values returned.")
+
+                  time.sleep(1)
+
+              print("\n========== MULTI-POINT SUMMARY ==========")
+              print(f"Points selected: {len(selected_points)}")
+              print(f"Points with valid results: {successful_points}")
+
+              if successful_points < 2:
+                  raise RuntimeError(
+                      "Fewer than two points returned valid data; "
+                      "the multi-point comparison is inconclusive."
+                  )
+
+              print("\nDate | Points | Mean FWI | Minimum | Maximum")
+
+              for date_key in sorted(results_by_date):
+                  values = results_by_date[date_key]
+
+                  print(
+                      f"{date_key} | {len(values)} | "
+                      f"{statistics.mean(values):.3f} | "
+                      f"{min(values):.3f} | {max(values):.3f}"
+                  )
+
+              print("\nImportant:")
+              print(
+                  "These statistics use only the five test points. "
+                  "They are not the final Mount Derak regional average."
+              )
+
+          if __name__ == "__main__":
+              main()
+          PY
+
+          python test_effis_multi_point.py
