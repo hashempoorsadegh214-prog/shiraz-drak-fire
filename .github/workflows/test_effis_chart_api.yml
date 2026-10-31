@@ -1,0 +1,103 @@
+name: Test EFFIS Chart API
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Query EFFIS API
+        run: |
+          python - <<'PY'
+          import json
+          import requests
+          from datetime import datetime, timedelta, timezone
+
+          url = "https://api.effis.emergency.copernicus.eu/rest/2/burntareas/charts/wms"
+
+          iran_tz = timezone(timedelta(hours=3, minutes=30))
+          today = datetime.now(iran_tz).date()
+          last_day = today + timedelta(days=9)
+
+          params = {
+              "model": "ecmwf",
+              "day_gte": today.isoformat(),
+              "day_lte": last_day.isoformat(),
+              "point": "(52.404 29.684)"
+          }
+
+          print("REQUEST PARAMETERS:")
+          print(json.dumps(params, indent=2))
+
+          response = requests.get(
+              url,
+              params=params,
+              headers={
+                  "User-Agent": "SHIRAZ-DERAK-FWI-DIAGNOSTIC/1.0",
+                  "Accept": "application/json"
+              },
+              timeout=45
+          )
+
+          print("HTTP STATUS:", response.status_code)
+          print("FINAL URL:", response.url)
+          print("CONTENT TYPE:", response.headers.get("Content-Type"))
+
+          if response.status_code != 200:
+              print("ERROR RESPONSE:")
+              print(response.text[:5000])
+              raise SystemExit("API request failed.")
+
+          try:
+              payload = response.json()
+          except Exception:
+              print("RESPONSE IS NOT JSON:")
+              print(response.text[:5000])
+              raise SystemExit("Could not parse JSON.")
+
+          if not isinstance(payload, dict):
+              print("UNEXPECTED RESPONSE:")
+              print(json.dumps(payload, ensure_ascii=False)[:8000])
+              raise SystemExit("Unexpected response structure.")
+
+          print("TOP-LEVEL KEYS:", list(payload.keys()))
+
+          x_data = payload.get("x_data")
+          y_data = payload.get("y_data")
+
+          print("x_data type:", type(x_data).__name__)
+          print("y_data type:", type(y_data).__name__)
+
+          if isinstance(y_data, dict):
+              print("y_data keys:", list(y_data.keys()))
+
+          fwi_values = (
+              y_data.get("fwi")
+              if isinstance(y_data, dict)
+              else None
+          )
+
+          if isinstance(x_data, list) and isinstance(fwi_values, list):
+              print("DATE | FWI")
+
+              for index, date_value in enumerate(x_data):
+                  value = (
+                      fwi_values[index]
+                      if index < len(fwi_values)
+                      else None
+                  )
+
+                  print(f"{date_value} | {value}")
+          else:
+              print("EXPECTED ARRAYS NOT FOUND.")
+              print("RAW RESPONSE:")
+              print(json.dumps(payload, ensure_ascii=False)[:8000])
+
+          print("DIAGNOSTIC COMPLETE")
+          PY
