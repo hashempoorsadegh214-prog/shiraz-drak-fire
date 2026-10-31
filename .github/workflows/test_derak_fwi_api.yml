@@ -1,0 +1,494 @@
+name: Test Derak FWI API - Full Area
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: derak-fwi-api-test
+  cancel-in-progress: false
+
+jobs:
+  test-full-area:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests geopandas shapely pyproj
+
+      - name: Test REST API over the full Derak boundary
+        run: |
+          mkdir -p test-results
+
+          cat > test_derak_fwi.py <<'PY'
+          import concurrent.futures
+          import csv
+          import datetime as dt
+          import json
+          import math
+          import random
+          import time
+          from pathlib import Path
+          from zoneinfo import ZoneInfo
+
+          import geopandas as gpd
+          import requests
+          from shapely.geometry import Point
+          from shapely.ops import unary_union
+
+
+          # --------------------------------------------------
+          # تنظیمات تست
+          # --------------------------------------------------
+
+          BASE_DIR = Path.cwd()
+          BOUNDARY_FILE = BASE_DIR / "Derak_Mountain.geojson"
+          OUTPUT_DIR = BASE_DIR / "test-results"
+
+          API_URL = (
+              "https://api.effis.emergency.copernicus.eu/"
+              "rest/2/burntareas/charts/wms"
+          )
+
+          MODEL = "ecmwf"
+          GRID_STEP = 0.008
+          MAX_WORKERS = 4
+          MAX_RETRIES = 3
+          REQUEST_TIMEOUT = 30
+          MIN_COVERAGE = 0.70
+
+          TEHRAN = ZoneInfo("Asia/Tehran")
+
+          OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+
+          # --------------------------------------------------
+          # ساخت شبکه نقاط داخل مرز
+          # --------------------------------------------------
+
+          def create_grid():
+              if not BOUNDARY_FILE.exists():
+                  raise FileNotFoundError(
+                      f"Boundary file not found: {BOUNDARY_FILE}"
+                  )
+
+              boundary = gpd.read_file(BOUNDARY_FILE)
+
+              if boundary.empty:
+                  raise RuntimeError("Boundary file is empty.")
+
+              if boundary.crs is None:
+                  boundary = boundary.set_crs("EPSG:4326")
+              else:
+                  boundary = boundary.to_crs("EPSG:4326")
+
+              geometry = unary_union(
+                  [
+                      geom
+                      for geom in boundary.geometry
+                      if geom is not None
+                  ]
+              )
+
+              if geometry.is_empty:
+                  raise RuntimeError("Boundary geometry is empty.")
+
+              minx, miny, maxx, maxy = geometry.bounds
+
+              points = []
+              lat = miny
+
+              while lat <= maxy + 1e-9:
+                  lon = minx
+
+                  while lon <= maxx + 1e-9:
+                      point = Point(lon, lat)
+
+                      if geometry.covers(point):
+                          points.append(
+                              (round(lon, 6), round(lat, 6))
+                          )
+
+                      lon += GRID_STEP
+
+                  lat += GRID_STEP
+
+              points = list(dict.fromkeys(points))
+
+              if not points:
+                  raise RuntimeError(
+                      "No grid points found inside the boundary."
+                  )
+
+              return points
+
+
+          # --------------------------------------------------
+          # درخواست API برای هر نقطه
+          # --------------------------------------------------
+
+          def fetch_point(point, start_date, end_date):
+              lon, lat = point
+
+              params = {
+                  "model": MODEL,
+                  "day_gte": start_date,
+                  "day_lte": end_date,
+                  "point": f"({lon:.6f} {lat:.6f})"
+              }
+
+              last_error = None
+
+              for attempt in range(1, MAX_RETRIES + 1):
+                  try:
+                      response = requests.get(
+                          API_URL,
+                          params=params,
+                          timeout=REQUEST_TIMEOUT,
+                          headers={
+                              "Accept": "application/json",
+                              "User-Agent": "Derak-FWI-Test/1.0"
+                          }
+                      )
+
+                      response.raise_for_status()
+                      payload = response.json()
+
+                      dates = payload.get("x_data", [])
+                      y_data = payload.get("y_data", {})
+                      fwi_values = y_data.get("fwi", [])
+
+                      if not isinstance(dates, list):
+                          raise ValueError("Invalid x_data.")
+
+                      if not isinstance(fwi_values, list):
+                          raise ValueError("Invalid y_data.fwi.")
+
+                      if len(dates) != len(fwi_values):
+                          raise ValueError(
+                              "Dates and FWI arrays have different lengths."
+                          )
+
+                      values = {}
+
+                      for raw_date, raw_value in zip(
+                          dates, fwi_values
+                      ):
+                          date_string = str(raw_date)[:10]
+
+                          try:
+                              dt.date.fromisoformat(date_string)
+                              value = float(raw_value)
+                          except (ValueError, TypeError):
+                              continue
+
+                          if not math.isfinite(value):
+                              continue
+
+                          if not 0 <= value <= 200:
+                              continue
+
+                          values[date_string] = value
+
+                      if not values:
+                          raise ValueError(
+                              "No valid FWI values in API response."
+                          )
+
+                      return {
+                          "lon": lon,
+                          "lat": lat,
+                          "values": values,
+                          "error": None
+                      }
+
+                  except Exception as exc:
+                      last_error = str(exc)
+
+                      print(
+                          f"RETRY {attempt}/{MAX_RETRIES} "
+                          f"point=({lon},{lat}) error={last_error}"
+                      )
+
+                      if attempt < MAX_RETRIES:
+                          time.sleep(
+                              (2 ** attempt) + random.uniform(0, 1)
+                          )
+
+              return {
+                  "lon": lon,
+                  "lat": lat,
+                  "values": {},
+                  "error": last_error
+              }
+
+
+          # --------------------------------------------------
+          # اجرای تست
+          # --------------------------------------------------
+
+          def main():
+              now = dt.datetime.now(TEHRAN)
+              today = now.date()
+
+              start_date = today.isoformat()
+              end_date = (
+                  today + dt.timedelta(days=9)
+              ).isoformat()
+
+              print("=" * 65)
+              print("DERAK FWI REST API - FULL AREA TEST")
+              print("=" * 65)
+              print(f"Tehran time: {now.isoformat()}")
+              print(f"Forecast start: {start_date}")
+              print(f"Forecast end requested: {end_date}")
+              print(f"Grid step: {GRID_STEP}")
+              print(f"Minimum coverage: {MIN_COVERAGE * 100:.0f}%")
+              print()
+
+              points = create_grid()
+              total_points = len(points)
+
+              print(f"Grid points inside boundary: {total_points}")
+              print(f"Concurrent requests: {MAX_WORKERS}")
+              print()
+
+              results = []
+
+              with concurrent.futures.ThreadPoolExecutor(
+                  max_workers=MAX_WORKERS
+              ) as executor:
+                  futures = [
+                      executor.submit(
+                          fetch_point,
+                          point,
+                          start_date,
+                          end_date
+                      )
+                      for point in points
+                  ]
+
+                  completed = 0
+
+                  for future in concurrent.futures.as_completed(futures):
+                      result = future.result()
+                      results.append(result)
+                      completed += 1
+
+                      if completed % 10 == 0 or completed == total_points:
+                          print(
+                              f"Progress: {completed}/{total_points}"
+                          )
+
+              successful = [
+                  result for result in results
+                  if result["values"]
+              ]
+
+              failed = [
+                  result for result in results
+                  if not result["values"]
+              ]
+
+              values_by_date = {}
+
+              for result in successful:
+                  for date_string, value in result["values"].items():
+                      values_by_date.setdefault(
+                          date_string, []
+                      ).append({
+                          "lon": result["lon"],
+                          "lat": result["lat"],
+                          "fwi": value
+                      })
+
+              minimum_points = math.ceil(
+                  total_points * MIN_COVERAGE
+              )
+
+              daily_results = []
+
+              print()
+              print("=" * 65)
+              print("DAILY REGIONAL SUMMARY")
+              print("=" * 65)
+              print(
+                  f"{'Date':<12} {'Count':>7} {'Coverage':>10} "
+                  f"{'Mean':>10} {'Min':>10} {'Max':>10} {'Status':>10}"
+              )
+
+              for date_string in sorted(values_by_date):
+                  samples = values_by_date[date_string]
+                  numbers = [item["fwi"] for item in samples]
+
+                  count = len(numbers)
+                  coverage = 100 * count / total_points
+                  mean_value = sum(numbers) / count
+
+                  status = (
+                      "PASS"
+                      if count >= minimum_points
+                      else "LOW_COVERAGE"
+                  )
+
+                  daily_record = {
+                      "date": date_string,
+                      "points_valid": count,
+                      "points_total": total_points,
+                      "coverage_percent": round(coverage, 2),
+                      "mean_fwi": round(mean_value, 3),
+                      "min_fwi": round(min(numbers), 3),
+                      "max_fwi": round(max(numbers), 3),
+                      "status": status
+                  }
+
+                  daily_results.append(daily_record)
+
+                  print(
+                      f"{date_string:<12} {count:>7} "
+                      f"{coverage:>9.1f}% "
+                      f"{mean_value:>10.3f} "
+                      f"{min(numbers):>10.3f} "
+                      f"{max(numbers):>10.3f} "
+                      f"{status:>10}"
+                  )
+
+              today_result = next(
+                  (
+                      item for item in daily_results
+                      if item["date"] == start_date
+                  ),
+                  None
+              )
+
+              report = {
+                  "test_name": "Derak FWI full-area REST API test",
+                  "generated_at_tehran": now.isoformat(),
+                  "boundary_file": BOUNDARY_FILE.name,
+                  "model": MODEL,
+                  "grid_step": GRID_STEP,
+                  "total_grid_points": total_points,
+                  "successful_point_requests": len(successful),
+                  "failed_point_requests": len(failed),
+                  "minimum_coverage_percent": MIN_COVERAGE * 100,
+                  "minimum_points_required_per_day": minimum_points,
+                  "requested_start_date": start_date,
+                  "requested_end_date": end_date,
+                  "today_result": today_result,
+                  "daily_results": daily_results,
+                  "failed_points": [
+                      {
+                          "lon": item["lon"],
+                          "lat": item["lat"],
+                          "error": item["error"]
+                      }
+                      for item in failed
+                  ],
+                  "note": (
+                      "Test only. The production website JSON was not modified."
+                  )
+              }
+
+              json_path = OUTPUT_DIR / "derak_fwi_test_report.json"
+
+              with json_path.open(
+                  "w", encoding="utf-8"
+              ) as file:
+                  json.dump(
+                      report,
+                      file,
+                      ensure_ascii=False,
+                      indent=2,
+                      allow_nan=False
+                  )
+
+              csv_path = OUTPUT_DIR / "derak_fwi_daily_summary.csv"
+
+              with csv_path.open(
+                  "w", newline="", encoding="utf-8-sig"
+              ) as file:
+                  fieldnames = [
+                      "date",
+                      "points_valid",
+                      "points_total",
+                      "coverage_percent",
+                      "mean_fwi",
+                      "min_fwi",
+                      "max_fwi",
+                      "status"
+                  ]
+
+                  writer = csv.DictWriter(
+                      file,
+                      fieldnames=fieldnames
+                  )
+
+                  writer.writeheader()
+                  writer.writerows(daily_results)
+
+              print()
+              print("=" * 65)
+              print("TEST TOTALS")
+              print("=" * 65)
+              print(f"Total grid points: {total_points}")
+              print(f"Successful points: {len(successful)}")
+              print(f"Failed points: {len(failed)}")
+              print(f"Dates returned: {len(daily_results)}")
+              print(f"JSON report: {json_path}")
+              print(f"CSV summary: {csv_path}")
+
+              if today_result:
+                  print()
+                  print("TODAY'S RESULT")
+                  print(json.dumps(
+                      today_result,
+                      ensure_ascii=False,
+                      indent=2
+                  ))
+              else:
+                  print()
+                  print("WARNING: No valid result for today's date.")
+
+              if not successful:
+                  raise RuntimeError(
+                      "All API point requests failed."
+                  )
+
+              if today_result is None:
+                  raise RuntimeError(
+                      "The API did not return a valid result for today."
+                  )
+
+              if today_result["points_valid"] < minimum_points:
+                  raise RuntimeError(
+                      "Today's coverage is below the required threshold."
+                  )
+
+
+          if __name__ == "__main__":
+              main()
+          PY
+
+          python test_derak_fwi.py
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: derak-fwi-full-area-test
+          path: test-results/
+          if-no-files-found: warn
+          retention-days: 14
