@@ -1,5 +1,5 @@
 {
-  "generated_at_tehran": "2026-11-25T15:07:01.928312+03:30",
+  "generated_at_tehran": "2026-11-25T19:28:41.210778+03:30",
   "source": "https://api.effis.emergency.copernicus.eu/rest/2/burntareas/charts/wms",
   "model": "ecmwf",
   "boundary_file": "Derak_Mountain.geojson",
