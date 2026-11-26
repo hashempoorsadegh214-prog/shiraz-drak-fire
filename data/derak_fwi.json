@@ -1,68 +1,68 @@
 {
   "area_id": "derak-mountain",
   "area_name": "کوهستان دراک",
-  "forecast_gregorian": "2026-11-25",
-  "forecast_shamsi": "1405/09/04",
-  "updated_at": "1405/09/04 - 14:02",
+  "forecast_gregorian": "2026-11-26",
+  "forecast_shamsi": "1405/09/05",
+  "updated_at": "1405/09/05 - 13:33",
   "fwi": 23.48,
   "risk_level_fa": "زیاد",
   "risk_level_en": "High",
   "risk_color": "#f97316",
   "points_count": 89,
-  "last_epoch": 1795602722,
+  "last_epoch": 1795687429,
   "grid_step": 0.008,
   "debug_samples": [
     {
-      "time": "2026-11-25",
+      "time": "2026-11-26",
       "lon": 52.44942,
       "lat": 29.637383,
       "fwi": 24.26,
       "err": null
     },
     {
-      "time": "2026-11-25",
+      "time": "2026-11-26",
       "lon": 52.40942,
       "lat": 29.645383,
       "fwi": 24.26,
       "err": null
     },
     {
-      "time": "2026-11-25",
+      "time": "2026-11-26",
       "lon": 52.41742,
       "lat": 29.645383,
       "fwi": 24.26,
       "err": null
     },
     {
-      "time": "2026-11-25",
+      "time": "2026-11-26",
       "lon": 52.42542,
       "lat": 29.645383,
       "fwi": 24.26,
       "err": null
     },
     {
-      "time": "2026-11-25",
+      "time": "2026-11-26",
       "lon": 52.43342,
       "lat": 29.645383,
       "fwi": 24.26,
       "err": null
     },
     {
-      "time": "2026-11-25",
+      "time": "2026-11-26",
       "lon": 52.44142,
       "lat": 29.645383,
       "fwi": 24.26,
       "err": null
     },
     {
-      "time": "2026-11-25",
+      "time": "2026-11-26",
       "lon": 52.44942,
       "lat": 29.645383,
       "fwi": 24.26,
       "err": null
     },
     {
-      "time": "2026-11-25",
+      "time": "2026-11-26",
       "lon": 52.39342,
       "lat": 29.653383,
       "fwi": 24.26,
